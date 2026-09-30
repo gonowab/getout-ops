@@ -21,7 +21,14 @@ export default async function LoginPage() {
         </div>
         <div className="rounded-xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           {isSupabaseConfigured() ? (
-            <LoginForm />
+            <>
+              <LoginForm />
+              {missingEnvNames().length > 0 ? (
+                <div className="mt-4 rounded-md bg-warn-soft px-3 py-2 text-[12px] text-warn">
+                  Saknas i Vercel: {missingEnvNames().join(", ")}
+                </div>
+              ) : null}
+            </>
           ) : (
             <div className="text-[13px] text-muted">
               <p>Inloggningen är inte kopplad än. De här variablerna saknas i Vercel:</p>
