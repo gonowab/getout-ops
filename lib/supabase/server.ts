@@ -17,6 +17,16 @@ export function isSupabaseConfigured() {
   return Boolean(supabaseUrl() && supabasePublicKey());
 }
 
+/** Namnen (aldrig värdena) på miljövariabler som saknas – visas på inloggningssidan vid felsökning. */
+export function missingEnvNames() {
+  const missing: string[] = [];
+  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
+  if (!supabaseUrl()) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!supabasePublicKey()) missing.push("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+  if (!process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) missing.push("SUPABASE_SECRET_KEY");
+  return missing;
+}
+
 /** Lokalt utvecklingsläge utan Supabase. Går aldrig att slå på i Vercel. */
 export function isDevAuth() {
   return process.env.DEV_AUTH === "true" && !process.env.VERCEL;
