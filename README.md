@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GetOut Operations
 
-## Getting Started
+Internt verktyg för lager och ordrar. Svarar på fem frågor: vad finns i lager, vilka ordrar ska skickas, vad är skickat, vem väntar på faktura och vad behöver göras idag.
 
-First, run the development server:
+Driftsättning: se [SETUP.md](SETUP.md).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Sidor
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Översikt** – orderräknare, lager per region och listan *Att göra idag*
+- **Ordrar** – flikar för att hantera, packa, skickade, fakturering och alla. Ny order med knappen eller tangenten `N`.
+- **Lager** – totalt, reserverat och tillgängligt per kortlek, samt historik och registrering av inleverans, justering och retur
+- **Kunder** – kundregister med ordrar per kund
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Lagerregler
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Saldot är summan av alla lagerrörelser. Inget tal skrivs över.
+- **Bekräftad** och **Ska packas** reserverar lager.
+- **Skickad** drar lagret. Det sker en gång, i databasen, i samma transaktion som statusbytet.
+- Backar man från skickad (eller makulerar) läggs lagret tillbaka.
+- Gamla och nya askar är separata produkter. Gamla askar har ingen lågt-saldo-varning.
 
-## Learn More
+## Teknik
 
-To learn more about Next.js, take a look at the following resources:
+Next.js 16 (App Router, Server Actions), Tailwind 4, Supabase (Postgres, Auth, Storage), Vercel.
+Appen läser och skriver databasen från servern via `DATABASE_URL`. Supabase används för inloggning och faktura-PDF:er.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Mapp | Innehåll |
+|---|---|
+| `supabase/migrations` | Databasschema |
+| `supabase/seed.sql` | Testdata |
+| `lib/queries.ts` | Läsning |
+| `lib/actions/` | Alla ändringar (ordrar, lager, kunder, inloggning) |
+| `components/` | Gränssnitt |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Nästa steg
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Shopify-import, lagersynk till Shopify, Fortnox, frakt och statistik.
