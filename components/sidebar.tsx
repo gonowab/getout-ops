@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, LayoutGrid, LogOut, Package, Plus, Settings, Users } from "lucide-react";
+import { Boxes, LayoutGrid, LogOut, Package, Plus, Settings, Users, Wallet } from "lucide-react";
 import { cn, Kbd } from "@/components/ui";
 import { useOrderPanel } from "@/components/order-panel";
 import { signOut } from "@/lib/actions/auth";
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/ordrar", label: "Ordrar", icon: Package },
   { href: "/lager", label: "Lager", icon: Boxes },
   { href: "/kunder", label: "Kunder", icon: Users },
+  { href: "/ekonomi", label: "Ekonomi", icon: Wallet },
 ];
 
 export function Sidebar({

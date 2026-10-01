@@ -10,6 +10,7 @@ Driftsättning: se [SETUP.md](SETUP.md).
 - **Ordrar** – flikar för att hantera, packa, skickade, fakturering och alla. Ny order med knappen eller tangenten `N`.
 - **Lager** – totalt, reserverat och tillgängligt per kortlek, samt historik och registrering av inleverans, justering och retur
 - **Kunder** – kundregister med ordrar per kund
+- **Ekonomi** – ordervärde (exkl. moms) per period, uppdelat på betalt, fakturerat, förfallet och ej fakturerat, per kanal och per kortlek, samt alla obetalda fakturor
 
 ## Lagerregler
 
