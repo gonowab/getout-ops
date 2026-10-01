@@ -1,5 +1,6 @@
 import "server-only";
 import postgres from "postgres";
+import { parseDatabaseUrl } from "@/lib/db-url";
 
 // En anslutning per serverinstans. På Vercel används Supabase "transaction pooler"
 // (port 6543), som inte stödjer prepared statements – därav prepare: false.
@@ -8,8 +9,10 @@ const globalForDb = globalThis as unknown as { sql?: postgres.Sql };
 function createClient() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL saknas. Se SETUP.md.");
-  const isLocal = /localhost|127\.0\.0\.1|host=\/|@\/|\/var\/run/.test(url);
-  return postgres(url, {
+  const cfg = parseDatabaseUrl(url);
+  const isLocal = ["localhost", "127.0.0.1"].includes(cfg.host);
+  return postgres({
+    ...cfg,
     prepare: false,
     max: 5,
     idle_timeout: 20,

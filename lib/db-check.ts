@@ -1,6 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { sql } from "@/lib/db";
+import { DatabaseUrlError, parseDatabaseUrl } from "@/lib/db-url";
 
 /**
  * Kontrollerar databasanslutningen och översätter vanliga fel till något begripligt.
@@ -14,6 +15,16 @@ export async function checkDatabase(): Promise<{ title: string; hint: string; de
       hint: "Lägg in anslutningssträngen i Vercel och driftsätt igen.",
       detail: "",
     };
+  }
+  try {
+    parseDatabaseUrl(process.env.DATABASE_URL);
+  } catch (e) {
+    if (e instanceof DatabaseUrlError)
+      return {
+        title: "DATABASE_URL är felformaterad",
+        hint: `${e.message} Rätta värdet i Vercel och driftsätt igen.`,
+        detail: "",
+      };
   }
   try {
     await sql`select count(*) from products`;
