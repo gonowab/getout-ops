@@ -22,16 +22,18 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
+  // getClaims förnyar sessionen vid behov och verifierar lokalt när det går
+  const { data } = await supabase.auth.getClaims();
+  const loggedIn = Boolean(data?.claims?.sub);
   const isLogin = request.nextUrl.pathname.startsWith("/login");
 
-  if (!data.user && !isLogin) {
+  if (!loggedIn && !isLogin) {
     const to = request.nextUrl.clone();
     to.pathname = "/login";
     to.search = "";
     return NextResponse.redirect(to);
   }
-  if (data.user && isLogin) {
+  if (loggedIn && isLogin) {
     const to = request.nextUrl.clone();
     to.pathname = "/";
     return NextResponse.redirect(to);

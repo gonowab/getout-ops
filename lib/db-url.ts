@@ -10,7 +10,7 @@ export type DbConfig = {
   host: string;
   port: number;
   user: string;
-  password: string;
+  password: string | undefined;
   database: string;
 };
 
@@ -31,16 +31,14 @@ export function parseDatabaseUrl(raw: string): DbConfig {
   const hostpart = rest.slice(at + 1);
 
   const colon = userinfo.indexOf(":");
-  if (colon === -1) throw new DatabaseUrlError("Lösenordet saknas i strängen.");
-  const user = safeDecode(userinfo.slice(0, colon));
-  let password = userinfo.slice(colon + 1);
+  const user = safeDecode(colon === -1 ? userinfo : userinfo.slice(0, colon));
+  let password = colon === -1 ? "" : userinfo.slice(colon + 1);
 
   if (/^\[?YOUR-PASSWORD\]?$/i.test(password))
     throw new DatabaseUrlError("[YOUR-PASSWORD] har inte bytts ut mot det riktiga lösenordet.");
   // Hakparenteserna från Supabases mall ska bort – ta dem om de blivit kvar runt lösenordet
   if (password.startsWith("[") && password.endsWith("]")) password = password.slice(1, -1);
   password = safeDecode(password);
-  if (!password) throw new DatabaseUrlError("Lösenordet är tomt.");
 
   const m = hostpart.match(/^([^:/?#\s]+)(?::(\d+))?(?:\/([^?#\s]*))?/);
   if (!m) throw new DatabaseUrlError("Adressen efter @ går inte att läsa.");
@@ -48,7 +46,7 @@ export function parseDatabaseUrl(raw: string): DbConfig {
   const port = m[2] ? Number(m[2]) : 5432;
   const database = m[3] ? safeDecode(m[3]) : "postgres";
 
-  return { host, port, user, password, database };
+  return { host, port, user, password: password || undefined, database };
 }
 
 function safeDecode(v: string) {

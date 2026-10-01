@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { sql } from "@/lib/db";
 import type {
   Customer,
@@ -11,18 +12,26 @@ import type {
   StockLevel,
 } from "@/lib/types";
 
-export async function getProducts() {
+// cache() gör att samma fråga bara körs en gång per sidvisning,
+// även om både sidomenyn och sidan själv behöver den.
+export const getProducts = cache(async () => {
   return sql<Product[]>`
     select id, sku, name, region, edition, sort_order, low_stock_threshold
     from products where active order by sort_order`;
-}
+});
 
-export async function getStock() {
+export const getStock = cache(async () => {
   return sql<StockLevel[]>`
     select product_id, product_id as id, sku, name, region, edition, sort_order, low_stock_threshold,
            totalt, reserverat, tillgangligt, lagt_saldo
     from stock_levels order by sort_order`;
-}
+});
+
+export const getOpenOrderCount = cache(async () => {
+  const [{ n }] = await sql<{ n: number }[]>`
+    select count(*)::int as n from orders where status in ('ny','bekraftad','ska_packas')`;
+  return n;
+});
 
 export async function getDashboardCounts() {
   const [row] = await sql`select * from dashboard_counts`;
