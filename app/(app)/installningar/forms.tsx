@@ -6,6 +6,8 @@ import { Button, EditionTag, Field, Input } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { changePassword } from "@/lib/actions/auth";
 import { updateThreshold } from "@/lib/actions/inventory";
+import { setShopifyEdition } from "@/lib/actions/shopify";
+import { Segmented } from "@/components/order-form";
 import type { Product } from "@/lib/types";
 
 export function ThresholdForm({ products }: { products: Product[] }) {
@@ -79,5 +81,43 @@ export function PasswordForm() {
         </Button>
       </div>
     </form>
+  );
+}
+
+export function ShopifyEditionForm({ mapping }: { mapping: { region: string; edition: "gammal" | "ny" | null }[] }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  return (
+    <div className="overflow-hidden rounded-xl border border-line">
+      {mapping.map((m, i) => (
+        <div
+          key={m.region}
+          className={`flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-line" : ""}`}
+        >
+          <span className="text-[13px] font-medium">{m.region}</span>
+          {m.edition ? (
+            <Segmented
+              value={m.edition}
+              onChange={(v) =>
+                start(async () => {
+                  if (pending) return;
+                  const res = await setShopifyEdition(m.region, v as "gammal" | "ny");
+                  if (!res.ok) return toast({ kind: "error", text: res.error });
+                  toast({ kind: "ok", text: res.message ?? "Sparat" });
+                  router.refresh();
+                })
+              }
+              options={[
+                { value: "gammal", label: "Gammal ask" },
+                { value: "ny", label: "Ny ask" },
+              ]}
+            />
+          ) : (
+            <span className="text-[12px] text-warn">Inte kopplad</span>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }

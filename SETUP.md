@@ -30,6 +30,21 @@ Secret key och databaslösenordet ger full åtkomst. De ska bara in i Vercel.
 
 Appen visar inte sidor för sökmotorer, och Supabase publika API är avstängt för alla tabeller – all data går via appens server.
 
+## Shopify (ordrar från webbshoppen)
+
+1. Kör `supabase/migrations/0002_shopify.sql` i Supabase SQL Editor (en gång).
+2. Shopify-admin → **Inställningar → Aviseringar → Webhooks** → **Skapa webhook**, tre gånger:
+   - Händelse: *Orderskapande*, *Orderuppdatering* respektive *Orderavbokning*
+   - Format: JSON
+   - URL: `https://getout-ops.vercel.app/api/webhooks/shopify`
+3. Under listan står *"Dina webhooks kommer att signeras med …"*. Kopiera nyckeln och lägg in den i Vercel som
+   `SHOPIFY_WEBHOOK_SECRET` (typ Secret). Driftsätt om.
+4. Testa med **Skicka testavisering** på en webhook. Den syns under Inställningar → Senast från Shopify.
+
+Nya ordrar hamnar under Att packa. Skickas de i Shopify blir de Skickade här och dras från lagret.
+Avbryts de i Shopify blir de Makulerade. Äldre, redan skickade ordrar importeras aldrig.
+En öppen äldre order hämtas in genom att man ändrar den i Shopify, t.ex. lägger till en tagg.
+
 ## Lokal utveckling (valfritt)
 
 Kräver Node 20+ och Postgres.

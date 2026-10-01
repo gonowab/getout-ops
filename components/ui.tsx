@@ -139,11 +139,11 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
 }
 
 export function EditionTag({ edition, className }: { edition: "gammal" | "ny"; className?: string }) {
-  if (edition === "ny") return <span className={cn("text-[12px] text-muted", className)}>Ny ask</span>;
+  if (edition === "ny") return <span className={cn("shrink-0 whitespace-nowrap text-[12px] text-muted", className)}>Ny ask</span>;
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-old-soft px-1.5 py-px text-[11px] font-medium text-old-ink",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-old-soft px-1.5 py-px text-[11px] font-medium text-old-ink",
         className,
       )}
     >
