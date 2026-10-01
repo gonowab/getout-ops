@@ -133,7 +133,7 @@ export default async function LagerPage(props: PageProps<"/lager">) {
                       <td className="px-4 py-2.5 text-muted">{movementLabel[m.type]}</td>
                       <td className="px-4 py-2.5">
                         {m.order_number ? (
-                          <Link href={`/ordrar/${m.order_number}`} className="hover:underline">
+                          <Link href={`/ordrar/${m.order_number}`} prefetch={false} className="hover:underline">
                             {m.note ?? orderRef(m.order_number)}
                           </Link>
                         ) : (

@@ -63,7 +63,7 @@ export function OrderTable({
               className={cn("relative border-t border-line hover:bg-canvas", o.status === "makulerad" && "opacity-60")}
             >
               <td className="whitespace-nowrap px-4 py-2.5">
-                <Link href={`/ordrar/${o.order_number}`} className="font-medium text-ink after:absolute after:inset-0">
+                <Link href={`/ordrar/${o.order_number}`} prefetch={false} className="font-medium text-ink after:absolute after:inset-0">
                   {orderRef(o.order_number)}
                 </Link>
                 <div className="text-[12px] text-subtle">

@@ -194,7 +194,7 @@ function WorkList({
           {orders.map((o) => (
             <li key={o.id} className="relative px-4 py-2.5 hover:bg-canvas">
               <div className="flex items-center justify-between gap-3 text-[13px]">
-                <Link href={`/ordrar/${o.order_number}`} className="flex min-w-0 items-baseline gap-2 after:absolute after:inset-0">
+                <Link href={`/ordrar/${o.order_number}`} prefetch={false} className="flex min-w-0 items-baseline gap-2 after:absolute after:inset-0">
                   <span className="shrink-0 font-medium tabular text-ink">{orderRef(o.order_number)}</span>
                   <span className="truncate text-ink">{o.customer_name}</span>
                 </Link>
