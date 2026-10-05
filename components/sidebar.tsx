@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, LayoutGrid, LogOut, Package, Plus, Settings, Users, Wallet } from "lucide-react";
+import { Boxes, LayoutGrid, LogOut, Package, Plus, Settings, Store, Users, Wallet } from "lucide-react";
 import { cn, Kbd } from "@/components/ui";
 import { useOrderPanel } from "@/components/order-panel";
 import { signOut } from "@/lib/actions/auth";
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/ordrar", label: "Ordrar", icon: Package },
   { href: "/lager", label: "Lager", icon: Boxes },
   { href: "/kunder", label: "Kunder", icon: Users },
+  { href: "/aterforsaljare", label: "Återförsäljare", icon: Store },
   { href: "/ekonomi", label: "Ekonomi", icon: Wallet },
 ];
 
@@ -21,7 +22,7 @@ export function Sidebar({
   devMode,
 }: {
   userName: string;
-  counts: { hantera: number };
+  counts: { hantera: number; uppfoljning: number };
   devMode: boolean;
 }) {
   const pathname = usePathname();
@@ -68,6 +69,9 @@ export function Sidebar({
             <span className="flex-1">{label}</span>
             {href === "/ordrar" && counts.hantera > 0 ? (
               <span className="hidden text-[12px] tabular text-subtle md:inline">{counts.hantera}</span>
+            ) : null}
+            {href === "/aterforsaljare" && counts.uppfoljning > 0 ? (
+              <span className="hidden text-[12px] font-medium tabular text-danger md:inline">{counts.uppfoljning}</span>
             ) : null}
           </Link>
         ))}

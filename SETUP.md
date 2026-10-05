@@ -45,6 +45,11 @@ Nya ordrar hamnar under Att packa. Skickas de i Shopify blir de Skickade här oc
 Avbryts de i Shopify blir de Makulerade. Äldre, redan skickade ordrar importeras aldrig.
 En öppen äldre order hämtas in genom att man ändrar den i Shopify, t.ex. lägger till en tagg.
 
+## Återförsäljare – uppföljning
+
+Kör `supabase/migrations/0003_aterforsaljare_uppfoljning.sql` i Supabase SQL Editor (en gång) innan sidan **Återförsäljare** används.
+Där läggs en leverans in med namn, antal, datum och anteckning. Uppföljningen sätts till en månad efter leveransen och syns som en röd siffra i menyn när det är dags.
+
 ## Lokal utveckling (valfritt)
 
 Kräver Node 20+ och Postgres.
