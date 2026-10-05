@@ -1,6 +1,12 @@
 import { unstable_rethrow } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { getCustomerOptions, getProducts, getStock, getOpenOrderCount } from "@/lib/queries";
+import {
+  getCustomerOptions,
+  getProducts,
+  getStock,
+  getOpenOrderCount,
+  getDueFollowUpCount,
+} from "@/lib/queries";
 import { checkDatabase } from "@/lib/db-check";
 import { isDevAuth } from "@/lib/supabase/server";
 import { OrderPanelProvider } from "@/components/order-panel";
@@ -11,13 +17,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   let data;
   try {
     const user = await requireUser();
-    const [products, stock, customers, openCount] = await Promise.all([
+    const [products, stock, customers, openCount, followUpCount] = await Promise.all([
       getProducts(),
       getStock(),
       getCustomerOptions(),
       getOpenOrderCount(),
+      getDueFollowUpCount(),
     ]);
-    data = { user, products, stock, customers, openCount };
+    data = { user, products, stock, customers, openCount, followUpCount };
   } catch (e) {
     unstable_rethrow(e); // låt omdirigering till /login gå igenom
     // Bara när något gått fel: ta reda på om det är databasen och visa ett begripligt fel
@@ -36,13 +43,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     );
   }
 
-  const { user, products, stock, customers, openCount } = data;
+  const { user, products, stock, customers, openCount, followUpCount } = data;
   return (
     <ToastProvider>
       <OrderPanelProvider products={products} stock={stock} customers={customers}>
         <div className="flex min-h-screen flex-col md:flex-row">
           <div className="shrink-0 border-b border-line bg-canvas md:w-[228px] md:border-b-0 md:border-r">
-            <Sidebar userName={user.name} counts={{ hantera: openCount }} devMode={isDevAuth()} />
+            <Sidebar userName={user.name} counts={{ hantera: openCount, uppfoljning: followUpCount }} devMode={isDevAuth()} />
           </div>
           <main className="min-w-0 flex-1">
             <div className="mx-auto w-full max-w-[1120px] px-4 py-6 sm:px-8 sm:py-8">{children}</div>

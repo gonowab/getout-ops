@@ -111,4 +111,15 @@ export type Movement = {
   user_name: string | null;
 };
 
+export type ResellerDelivery = {
+  id: string;
+  name: string;
+  quantity: number;
+  delivered_on: string;
+  follow_up_on: string;
+  followed_up: boolean;
+  note: string | null;
+  created_at: Date;
+};
+
 export type ActionResult = { ok: true; message?: string; id?: string } | { ok: false; error: string };

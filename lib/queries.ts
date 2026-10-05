@@ -9,6 +9,7 @@ import type {
   OrderRow,
   OrderStatus,
   Product,
+  ResellerDelivery,
   StockLevel,
 } from "@/lib/types";
 
@@ -134,6 +135,37 @@ export async function getCustomers(q?: string) {
     }
     order by lower(c.name)`;
 }
+
+/** Alla leveranser till återförsäljare, de som ska följas upp först */
+export async function getResellerDeliveries() {
+  return sql<ResellerDelivery[]>`
+    select id, name, quantity, delivered_on, follow_up_on, followed_up, note, created_at
+    from reseller_deliveries
+    order by followed_up, follow_up_on, lower(name)`;
+}
+
+/** Namn att föreslå i formuläret: redan registrerade återförsäljare och tidigare leveranser */
+export async function getResellerNameSuggestions() {
+  const rows = await sql<{ name: string }[]>`
+    select name from customers where type = 'aterforsaljare'
+    union
+    select name from reseller_deliveries
+    order by name`;
+  return rows.map((r) => r.name);
+}
+
+/** Antal uppföljningar som är på dagens datum eller försenade (för siffran i menyn) */
+export const getDueFollowUpCount = cache(async () => {
+  try {
+    const [{ n }] = await sql<{ n: number }[]>`
+      select count(*)::int as n from reseller_deliveries
+      where not followed_up and follow_up_on <= (now() at time zone 'Europe/Stockholm')::date`;
+    return n;
+  } catch {
+    // Tabellen finns inte förrän 0003 körts – menyn ska inte krascha av det
+    return 0;
+  }
+});
 
 /** Lätt lista för kundväljaren i orderformuläret */
 export async function getCustomerOptions() {
