@@ -5,6 +5,7 @@ import { EditionTag, cn } from "@/components/ui";
 import { InvoiceBadge, StatusBadge } from "@/components/badges";
 import { CommentBox, EditOrderButton, InvoicePanel, StatusControl } from "@/components/order-actions";
 import { ShippingPanel } from "@/components/shipping-panel";
+import { postnordBookingStatus } from "@/lib/postnord";
 import { getOrderByNumber, getProducts } from "@/lib/queries";
 import { dateTime, num, relativeDays, shortDate } from "@/lib/format";
 import { customerTypeLabel, orderRef, sourceLabel, statusLabel } from "@/lib/labels";
@@ -184,11 +185,14 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
             {o.shipped_at ? <Row label="Skickad">{dateTime(o.shipped_at)}</Row> : null}
             <ShippingPanel
               orderId={o.id}
+              orderNumber={o.order_number}
               status={o.status}
               weightGrams={o.weight_grams}
               trackingNumber={o.tracking_number}
               isShopify={Boolean(o.shopify_order_id)}
               shopifyFulfilled={Boolean(o.shopify_fulfilled_at)}
+              booked={Boolean(o.postnord_booked_at)}
+              bookingBlocked={postnordBookingStatus()}
             />
           </InfoBlock>
 

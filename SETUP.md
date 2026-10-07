@@ -57,6 +57,21 @@ Allt skickas med PostNord Home Small Prio (tjänstekod 86). Orderns vikt hämtas
 När spårningsnumret skickas markeras ordern som skickad i Shopify,
 kunden får Shopifys leveransmejl med spårningslänk och ordern blir Skickad här (lagret dras).
 
+## PostNord – bokning direkt från appen
+
+1. Kör `supabase/migrations/0005_postnord_bokning.sql` i Supabase SQL Editor (en gång).
+2. I Vercel, utöver `POSTNORD_API_KEY` och `POSTNORD_CUSTOMER_NUMBER`:
+   - `POSTNORD_SENDER_ADDRESS` – avsändaradressen, t.ex. `Storgatan 1, 211 22 Malmö`
+   - `POSTNORD_BOOKING` = `on` – först när PostNord har godkänt bokning via API.
+     Innan dess skickas inga bokningar (ogiltiga bokningar kan kosta pengar).
+   - Valfritt: `POSTNORD_PAPER_SIZE` (A4, A5, A6 eller LABEL, standard A4) och
+     `POSTNORD_BASE_URL=https://atapi2.postnord.com` för PostNords testmiljö.
+
+Under **Ordrar → Att packa** listas webbshoppens ordrar. **Boka** bokar Home Small Prio för de markerade,
+lägger in kolli-ID i Shopify (kunden får mejl med spårningslänk) och sätter ordrarna som Skickade.
+**Skriv ut etiketterna** öppnar en PDF. Dagens etiketter kan skrivas ut igen hela dagen.
+Ordrar över 3 kg bokas inte (gränsen för Home Small).
+
 ## Återförsäljare – uppföljning
 
 Kör `supabase/migrations/0003_aterforsaljare_uppfoljning.sql` i Supabase SQL Editor (en gång) innan sidan **Återförsäljare** används.
