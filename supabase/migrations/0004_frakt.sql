@@ -1,14 +1,10 @@
 -- ============================================================
--- 0004: Frakt – vikt, fraktsätt och spårning tillbaka till Shopify
+-- 0004: Frakt – vikt och spårning tillbaka till Shopify
 -- Körs en gång i Supabase: SQL Editor -> klistra in -> Run.
 -- ============================================================
 
--- Vikt i gram (från Shopify) och vilket PostNord-fraktsätt ordern ska skickas med.
---   home_small       = PostNord Home Small (tjänstekod 11), ca 4 dagar
---   home_small_prio  = PostNord Home Small Prio (tjänstekod 86), ca 1–2 dagar
+-- Vikt i gram (från Shopify). Allt skickas med PostNord Home Small Prio (tjänstekod 86).
 alter table orders add column if not exists weight_grams integer check (weight_grams is null or weight_grams >= 0);
-alter table orders add column if not exists shipping_service text not null default 'home_small'
-  check (shipping_service in ('home_small', 'home_small_prio'));
 -- När spårningsnumret skickades till Shopify (ordern markerad som skickad där, kunden mejlad)
 alter table orders add column if not exists shopify_fulfilled_at timestamptz;
 

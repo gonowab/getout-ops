@@ -5,10 +5,8 @@ import { z } from "zod";
 import { sql } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { fulfillWithTracking } from "@/lib/shopify-admin";
-import { shippingServiceLabel } from "@/lib/labels";
-import type { ActionResult, OrderStatus, ShippingService } from "@/lib/types";
+import type { ActionResult, OrderStatus } from "@/lib/types";
 
-const serviceEnum = z.enum(["home_small", "home_small_prio"]);
 // PostNords kolli-ID är bokstäver och siffror, t.ex. 00370712345678901234 eller UA123456789SE
 const trackingSchema = z
   .string()
@@ -21,25 +19,6 @@ function fail(e: unknown): ActionResult {
   const msg = e instanceof Error ? e.message : String(e);
   console.error(e);
   return { ok: false, error: msg };
-}
-
-/** Byt fraktsätt (Home Small / Home Small Prio) på en order */
-export async function setShippingService(orderId: string, service: ShippingService): Promise<ActionResult> {
-  try {
-    const user = await requireUser();
-    serviceEnum.parse(service);
-    const [row] = await sql<{ svc: ShippingService }[]>`
-      select shipping_service as svc from orders where id = ${orderId}`;
-    if (!row) throw new Error("Ordern finns inte");
-    if (row.svc === service) return { ok: true };
-    await sql`update orders set shipping_service = ${service} where id = ${orderId}`;
-    await sql`insert into order_events (order_id, kind, note, created_by)
-              values (${orderId}, 'andrad', ${`Fraktsätt ändrat till ${shippingServiceLabel[service]}`}, ${user.id})`;
-    revalidatePath("/", "layout");
-    return { ok: true, message: `Fraktsätt: ${shippingServiceLabel[service]}` };
-  } catch (e) {
-    return fail(e);
-  }
 }
 
 /**

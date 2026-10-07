@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { sql, type Sql } from "@/lib/db";
-import type { InvoiceStatus, OrderStatus, ShippingService } from "@/lib/types";
+import type { InvoiceStatus, OrderStatus } from "@/lib/types";
 
 /*
  * Shopify → GetOut Operations
@@ -50,7 +50,6 @@ export type ShopifyOrder = {
   fulfillment_status?: string | null;
   taxes_included?: boolean | null;
   total_weight?: number | null; // gram
-  shipping_lines?: { title?: string | null; code?: string | null }[];
   fulfillments?: { tracking_number?: string | null; status?: string | null }[];
   customer?: {
     id?: number | string | null;
@@ -102,12 +101,6 @@ function desiredStatus(o: ShopifyOrder): OrderStatus {
   if (o.cancelled_at) return "makulerad";
   if (o.fulfillment_status === "fulfilled") return "skickad";
   return "bekraftad";
-}
-
-/** Kundens valda frakt i kassan → PostNord-fraktsätt. Okänt = vanliga Home Small. */
-export function serviceFromShopify(o: ShopifyOrder): ShippingService {
-  const text = (o.shipping_lines ?? []).map((l) => `${l.title ?? ""} ${l.code ?? ""}`).join(" ");
-  return /prio|1:a klass|express/i.test(text) ? "home_small_prio" : "home_small";
 }
 
 function weightFromShopify(o: ShopifyOrder) {
@@ -306,7 +299,6 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
       shopify_order_id: shopifyId,
       shopify_order_name: name,
       weight_grams: weightFromShopify(order),
-      shipping_service: serviceFromShopify(order),
     })}
     returning id, order_number`;
 

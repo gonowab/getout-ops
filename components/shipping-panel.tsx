@@ -4,17 +4,15 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 import { Button, Input } from "@/components/ui";
-import { Segmented } from "@/components/order-form";
 import { useToast } from "@/components/toast";
-import { sendTrackingToShopify, setShippingService } from "@/lib/actions/shipping";
-import { shippingServiceLabel } from "@/lib/labels";
-import type { OrderStatus, ShippingService } from "@/lib/types";
+import { sendTrackingToShopify } from "@/lib/actions/shipping";
+import { SHIPPING_SERVICE } from "@/lib/labels";
+import type { OrderStatus } from "@/lib/types";
 
-/** Frakt på ordersidan: fraktsätt, vikt och spårningsnummer som skickas till Shopify */
+/** Frakt på ordersidan: vikt och spårningsnummer som skickas till Shopify */
 export function ShippingPanel({
   orderId,
   status,
-  service,
   weightGrams,
   trackingNumber,
   isShopify,
@@ -22,7 +20,6 @@ export function ShippingPanel({
 }: {
   orderId: string;
   status: OrderStatus;
-  service: ShippingService;
   weightGrams: number | null;
   trackingNumber: string | null;
   isShopify: boolean;
@@ -31,22 +28,9 @@ export function ShippingPanel({
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
-  const [svc, setSvc] = useState<ShippingService>(service);
   const [tracking, setTracking] = useState(trackingNumber ?? "");
   const locked = status === "makulerad";
   const done = isShopify ? shopifyFulfilled : Boolean(trackingNumber);
-
-  const changeService = (v: string) => {
-    const next = v as ShippingService;
-    setSvc(next);
-    start(async () => {
-      const res = await setShippingService(orderId, next);
-      if (!res.ok) {
-        setSvc(service);
-        toast({ kind: "error", text: res.error });
-      } else router.refresh();
-    });
-  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,22 +46,11 @@ export function ShippingPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[12px] text-muted">Fraktsätt PostNord</span>
-        {done || locked ? (
-          <span className="text-[13px] text-ink">{shippingServiceLabel[svc]}</span>
-        ) : (
-          <Segmented
-            value={svc}
-            onChange={changeService}
-            options={[
-              { value: "home_small", label: shippingServiceLabel.home_small },
-              { value: "home_small_prio", label: shippingServiceLabel.home_small_prio },
-            ]}
-          />
-        )}
-        <span className="text-[12px] text-muted">
-          {weightGrams ? `Vikt ${weightGrams} g` : "Vikt saknas"}
+      <div className="grid grid-cols-[104px_1fr] gap-2 text-[13px]">
+        <span className="text-muted">Frakt</span>
+        <span className="min-w-0 text-ink">
+          {SHIPPING_SERVICE.name}
+          <span className="block text-[12px] text-muted">{weightGrams ? `${weightGrams} g` : "Vikt saknas"}</span>
         </span>
       </div>
 

@@ -53,8 +53,8 @@ En öppen äldre order hämtas in genom att man ändrar den i Shopify, t.ex. lä
 3. I Vercel: `SHOPIFY_SHOP` (t.ex. `dinbutik.myshopify.com`), `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`
    (från appens Inställningar), samt `POSTNORD_API_KEY` och `POSTNORD_CUSTOMER_NUMBER`.
 
-På ordersidan väljs fraktsätt (Home Small, tjänstekod 11, eller Home Small Prio, kod 86). Kundens val i kassan
-och orderns vikt hämtas från Shopify. När spårningsnumret skickas markeras ordern som skickad i Shopify,
+Allt skickas med PostNord Home Small Prio (tjänstekod 86). Orderns vikt hämtas från Shopify.
+När spårningsnumret skickas markeras ordern som skickad i Shopify,
 kunden får Shopifys leveransmejl med spårningslänk och ordern blir Skickad här (lagret dras).
 
 ## Återförsäljare – uppföljning

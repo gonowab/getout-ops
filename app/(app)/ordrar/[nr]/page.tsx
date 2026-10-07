@@ -185,7 +185,6 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
             <ShippingPanel
               orderId={o.id}
               status={o.status}
-              service={o.shipping_service}
               weightGrams={o.weight_grams}
               trackingNumber={o.tracking_number}
               isShopify={Boolean(o.shopify_order_id)}
