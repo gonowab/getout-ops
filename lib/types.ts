@@ -82,6 +82,8 @@ export type OrderRow = {
   shopify_order_id: string | null;
   weight_grams: number | null;
   shopify_fulfilled_at: Date | null;
+  postnord_booked_at: Date | null;
+  postnord_booking_id: string | null;
   created_at: Date;
   updated_at: Date;
 };

@@ -3,6 +3,8 @@ import { Plus, Search } from "lucide-react";
 import { EmptyState, Input, PageHeader, cn } from "@/components/ui";
 import { OrderTable } from "@/components/order-table";
 import { NewOrderButton } from "./new-order-button";
+import { PostnordBatch } from "@/components/postnord-batch";
+import { postnordBookingStatus } from "@/lib/postnord";
 import { getOrderLinesFor, getOrders, getProducts, type OrderFilter } from "@/lib/queries";
 import { sql } from "@/lib/db";
 
@@ -45,6 +47,31 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
       from orders_overview`,
   ]);
   const lines = await getOrderLinesFor(orders.map((o) => o.id));
+
+  // Att packa: ordrar som kan bokas hos PostNord, och dagens bokningar (för utskrift av etiketter)
+  const toBook =
+    view === "packa"
+      ? orders
+          // Webbshoppens ordrar – företags- och återförsäljarordrar är för stora för Home Small
+          .filter((o) => o.source === "shopify" && !o.postnord_booked_at && !o.tracking_number)
+          .map((o) => ({
+            id: o.id,
+            orderNumber: o.order_number,
+            name: o.ship_name ?? o.contact_name ?? o.customer_name ?? "–",
+            city: o.ship_city,
+            qty: o.total_qty,
+            ready: Boolean(o.ship_address && o.ship_postal_code && o.ship_city && (o.ship_name || o.contact_name)),
+          }))
+      : [];
+  const bookedToday =
+    view === "packa"
+      ? (
+          await sql<{ order_number: number }[]>`
+            select order_number from orders
+            where postnord_booked_at >= (date_trunc('day', now() at time zone 'Europe/Stockholm') at time zone 'Europe/Stockholm')
+            order by order_number`
+        ).map((r) => r.order_number)
+      : [];
   const current = VIEWS.find((v) => v.value === view)!;
 
   const href = (patch: Record<string, string>) => {
@@ -98,6 +125,10 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
           <Input name="q" defaultValue={q} placeholder="Sök kund, ordernummer, faktura" className="pl-8" />
         </form>
       </div>
+
+      {view === "packa" ? (
+        <PostnordBatch rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
+      ) : null}
 
       {orders.length === 0 ? (
         <EmptyState title={q ? `Inga ordrar matchar ”${q}”` : "Inget här just nu"}>
