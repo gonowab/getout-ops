@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { EditionTag, cn } from "@/components/ui";
 import { InvoiceBadge, StatusBadge } from "@/components/badges";
 import { CommentBox, EditOrderButton, InvoicePanel, StatusControl } from "@/components/order-actions";
+import { ShippingPanel } from "@/components/shipping-panel";
 import { getOrderByNumber, getProducts } from "@/lib/queries";
 import { dateTime, num, relativeDays, shortDate } from "@/lib/format";
 import { customerTypeLabel, orderRef, sourceLabel, statusLabel } from "@/lib/labels";
@@ -181,7 +182,14 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
               )}
             </div>
             {o.shipped_at ? <Row label="Skickad">{dateTime(o.shipped_at)}</Row> : null}
-            {o.tracking_number ? <Row label="Kolli-ID">{o.tracking_number}</Row> : null}
+            <ShippingPanel
+              orderId={o.id}
+              status={o.status}
+              weightGrams={o.weight_grams}
+              trackingNumber={o.tracking_number}
+              isShopify={Boolean(o.shopify_order_id)}
+              shopifyFulfilled={Boolean(o.shopify_fulfilled_at)}
+            />
           </InfoBlock>
 
           <InfoBlock title="Faktura">

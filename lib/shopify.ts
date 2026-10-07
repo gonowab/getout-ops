@@ -49,6 +49,8 @@ export type ShopifyOrder = {
   financial_status?: string | null;
   fulfillment_status?: string | null;
   taxes_included?: boolean | null;
+  total_weight?: number | null; // gram
+  fulfillments?: { tracking_number?: string | null; status?: string | null }[];
   customer?: {
     id?: number | string | null;
     email?: string | null;
@@ -99,6 +101,11 @@ function desiredStatus(o: ShopifyOrder): OrderStatus {
   if (o.cancelled_at) return "makulerad";
   if (o.fulfillment_status === "fulfilled") return "skickad";
   return "bekraftad";
+}
+
+function weightFromShopify(o: ShopifyOrder) {
+  const w = Number(o.total_weight);
+  return Number.isFinite(w) && w > 0 ? Math.round(w) : null;
 }
 
 function invoiceFromShopify(o: ShopifyOrder): InvoiceStatus {
@@ -162,6 +169,10 @@ async function updateExisting(
 ): Promise<ProcessResult> {
   const changes: string[] = [];
   const want = desiredStatus(order);
+
+  // Vikten fylls i om den saknas (ordrar importerade innan vikten sparades)
+  const weight = weightFromShopify(order);
+  if (weight) await tx`update orders set weight_grams = ${weight} where id = ${existing.id} and weight_grams is null`;
   const notShippedYet = ["ny", "bekraftad", "ska_packas"].includes(existing.status);
 
   if (want === "makulerad" && existing.status !== "makulerad") {
@@ -170,6 +181,14 @@ async function updateExisting(
   } else if (want === "skickad" && notShippedYet) {
     await tx`select set_order_status(${existing.id}, 'skickad'::order_status, null, 'Skickad i Shopify')`;
     changes.push("skickad");
+  }
+
+  // Spårningsnummer som lagts in i Shopify (t.ex. av Synca) sparas här också om vi saknar det
+  const tracking = (order.fulfillments ?? []).map((f) => clean(f.tracking_number)).find(Boolean);
+  if (tracking) {
+    const updated = await tx`update orders set tracking_number = ${tracking}
+                             where id = ${existing.id} and tracking_number is null returning id`;
+    if (updated.length) changes.push("spårningsnummer");
   }
 
   if (invoiceFromShopify(order) === "betald" && existing.invoice_status === "ej_fakturerad") {
@@ -279,6 +298,7 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
       comment,
       shopify_order_id: shopifyId,
       shopify_order_name: name,
+      weight_grams: weightFromShopify(order),
     })}
     returning id, order_number`;
 

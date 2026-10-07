@@ -79,6 +79,9 @@ export type OrderRow = {
   paid_at: string | null;
   comment: string | null;
   shopify_order_name: string | null;
+  shopify_order_id: string | null;
+  weight_grams: number | null;
+  shopify_fulfilled_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };

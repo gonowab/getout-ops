@@ -83,3 +83,6 @@ export function productLabel(p: Pick<Product, "region" | "edition">) {
 export function orderRef(n: number) {
   return `GO-${n}`;
 }
+
+/** Allt skickas med PostNord Home Small Prio (tjänstekod 86, ca 1–2 dagar). */
+export const SHIPPING_SERVICE = { name: "PostNord Home Small Prio", code: "86" } as const;
