@@ -11,6 +11,7 @@ export type OrderStatus =
 export type InvoiceStatus = "ej_fakturerad" | "fakturerad" | "betald";
 export type MovementType = "inleverans" | "order" | "justering" | "retur";
 export type Edition = "gammal" | "ny";
+export type ShippingService = "home_small" | "home_small_prio";
 
 export type Product = {
   id: number;
@@ -79,6 +80,10 @@ export type OrderRow = {
   paid_at: string | null;
   comment: string | null;
   shopify_order_name: string | null;
+  shopify_order_id: string | null;
+  weight_grams: number | null;
+  shipping_service: ShippingService;
+  shopify_fulfilled_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };

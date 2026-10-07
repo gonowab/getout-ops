@@ -45,6 +45,18 @@ Nya ordrar hamnar under Att packa. Skickas de i Shopify blir de Skickade här oc
 Avbryts de i Shopify blir de Makulerade. Äldre, redan skickade ordrar importeras aldrig.
 En öppen äldre order hämtas in genom att man ändrar den i Shopify, t.ex. lägger till en tagg.
 
+## Frakt – spårningsnummer till Shopify
+
+1. Kör `supabase/migrations/0004_frakt.sql` i Supabase SQL Editor (en gång).
+2. Appen **GetOut ops** i Shopifys Dev Dashboard (dev.shopify.com) med behörigheterna `read_orders`,
+   `read_merchant_managed_fulfillment_orders` och `write_merchant_managed_fulfillment_orders`, installerad på butiken.
+3. I Vercel: `SHOPIFY_SHOP` (t.ex. `dinbutik.myshopify.com`), `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`
+   (från appens Inställningar), samt `POSTNORD_API_KEY` och `POSTNORD_CUSTOMER_NUMBER`.
+
+På ordersidan väljs fraktsätt (Home Small, tjänstekod 11, eller Home Small Prio, kod 86). Kundens val i kassan
+och orderns vikt hämtas från Shopify. När spårningsnumret skickas markeras ordern som skickad i Shopify,
+kunden får Shopifys leveransmejl med spårningslänk och ordern blir Skickad här (lagret dras).
+
 ## Återförsäljare – uppföljning
 
 Kör `supabase/migrations/0003_aterforsaljare_uppfoljning.sql` i Supabase SQL Editor (en gång) innan sidan **Återförsäljare** används.

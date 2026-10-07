@@ -1,4 +1,4 @@
-import type { CustomerType, InvoiceStatus, MovementType, OrderSource, OrderStatus, Product } from "./types";
+import type { CustomerType, InvoiceStatus, MovementType, OrderSource, OrderStatus, Product, ShippingService } from "./types";
 
 export const ORDER_FLOW: OrderStatus[] = [
   "ny",
@@ -83,3 +83,14 @@ export function productLabel(p: Pick<Product, "region" | "edition">) {
 export function orderRef(n: number) {
   return `GO-${n}`;
 }
+
+/** PostNord-fraktsätt. Tjänstekod 11 = Home Small (ca 4 dagar), 86 = Home Small Prio (ca 1–2 dagar). */
+export const shippingServiceLabel: Record<ShippingService, string> = {
+  home_small: "Home Small",
+  home_small_prio: "Home Small Prio",
+};
+
+export const postnordServiceCode: Record<ShippingService, string> = {
+  home_small: "11",
+  home_small_prio: "86",
+};
