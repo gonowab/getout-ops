@@ -110,8 +110,8 @@ export function ShippingPanel({
           <span className="text-[12px] text-muted">
             {bookingBlocked ??
               (isShopify
-                ? "Bokar Home Small Prio, markerar ordern som skickad i Shopify och mejlar kunden spårningslänken."
-                : "Bokar Home Small Prio och markerar ordern som skickad.")}
+                ? "Bokar Home Small Prio och mejlar kunden spårningslänken. Ordern ligger kvar under Att packa tills du markerar den som skickad."
+                : "Bokar Home Small Prio. Ordern ligger kvar under Att packa tills du markerar den som skickad.")}
           </span>
           {!manual ? (
             <button
