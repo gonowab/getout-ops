@@ -53,7 +53,8 @@ const SHIP_COLUMNS = sql`
 
 /**
  * Efter att spårningsnumret är sparat: markera ordern som skickad i Shopify (kunden får
- * mejl med spårningslänk) och sätt den som Skickad här, vilket drar lagret.
+ * mejl med spårningslänk) och lägg den under Att packa (Ska packas). Den blir Skickad här,
+ * och lagret dras, först när någon klickar Markera skickad.
  */
 async function finishShipped(o: ShipRow, tracking: string, userId: string, how: string) {
   let shopifyNote = "";
@@ -66,8 +67,8 @@ async function finishShipped(o: ShipRow, tracking: string, userId: string, how: 
   await sql`insert into order_events (order_id, kind, note, created_by)
             values (${o.id}, 'andrad', ${`${how} ${tracking}${shopifyNote ? `. ${shopifyNote}` : ""}`}, ${userId})`;
 
-  if (["ny", "bekraftad", "ska_packas"].includes(o.status)) {
-    await sql`select set_order_status(${o.id}, 'skickad'::order_status, ${userId}, ${how})`;
+  if (["ny", "bekraftad"].includes(o.status)) {
+    await sql`select set_order_status(${o.id}, 'ska_packas'::order_status, ${userId}, ${how})`;
   }
   return shopifyNote;
 }
@@ -101,7 +102,7 @@ export type BookResult = {
 
 /**
  * Bokar Home Small Prio hos PostNord för valda ordrar. För varje order: kolli-ID sparas,
- * ordern markeras som skickad i Shopify (kunden mejlas) och blir Skickad här.
+ * ordern markeras som skickad i Shopify (kunden mejlas) och ligger kvar under Att packa.
  * Etiketterna skrivs sedan ut via /api/etiketter.
  */
 export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> {
