@@ -27,3 +27,34 @@ export async function setShopifyEdition(region: string, edition: "gammal" | "ny"
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** Koppla en Shopify-produkt (variant-ID) till en kortlek, t.ex. när en ny produkt läggs upp */
+export async function addShopifyVariant(rawVariantId: string, productId: number): Promise<ActionResult> {
+  try {
+    await requireUser();
+    const variantId = z
+      .string()
+      .trim()
+      .regex(/^\d{6,20}$/, "Variant-ID är bara siffror, t.ex. 64071120027978")
+      .parse(rawVariantId);
+    z.number().int().positive().parse(productId);
+    await sql`insert into shopify_variants (shopify_variant_id, product_id) values (${variantId}, ${productId})
+              on conflict (shopify_variant_id) do update set product_id = excluded.product_id`;
+    revalidatePath("/installningar");
+    return { ok: true, message: "Produkten är kopplad. Nya ordrar med den kommer in automatiskt." };
+  } catch (e) {
+    if (e instanceof z.ZodError) return { ok: false, error: e.issues[0]?.message ?? "Ogiltigt variant-ID" };
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function removeShopifyVariant(variantId: string): Promise<ActionResult> {
+  try {
+    await requireUser();
+    await sql`delete from shopify_variants where shopify_variant_id = ${variantId}`;
+    revalidatePath("/installningar");
+    return { ok: true, message: "Kopplingen är borttagen" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
