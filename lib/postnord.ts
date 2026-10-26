@@ -12,8 +12,9 @@ import "server-only";
  *   POSTNORD_SENDER_ADDRESS   – avsändaradress, t.ex. "Storgatan 1, 211 22 Malmö"
  *   POSTNORD_SENDER_NAME      – valfritt, standard "GO now AB"
  *   POSTNORD_PAPER_SIZE       – valfritt etikettformat (A4, A5, A6, LABEL), standard A4
- *   POSTNORD_BOOKING          – "on" när PostNord har godkänt bokning via API. Innan dess
- *                               skickas inget, eftersom ogiltiga bokningar kan kosta pengar.
+ *   POSTNORD_APPLICATION_ID   – valfritt, standard 2758 (vårt applikations-ID från PostNord)
+ *   POSTNORD_BOOKING          – "on" när testbokningen har kontrollerats. Innan dess bokas
+ *                               inga riktiga försändelser, bara testetiketter (se testLabel).
  */
 
 // Testmiljö: POSTNORD_BASE_URL=https://atapi2.postnord.com (med testnyckel)
@@ -24,6 +25,16 @@ const MAX_KG = 3;
 // Etikettformat: A4, A5, A6, LABEL … (standard A4 = vanligt skrivarpapper)
 const paperSize = () => process.env.POSTNORD_PAPER_SIZE?.trim().toUpperCase() || "A4";
 const DEFAULT_KG = 0.25;
+// Applikations-ID som PostNord tilldelat GetOut Operations (krävs för Booking API)
+const applicationId = () => parseInt(process.env.POSTNORD_APPLICATION_ID?.trim() || "2758", 10);
+
+/** Saknas något som behövs för att prata med PostNord alls (även testbokning)? */
+export function postnordConfigProblem(): string | null {
+  if (!process.env.POSTNORD_API_KEY) return "POSTNORD_API_KEY saknas i Vercel";
+  if (!process.env.POSTNORD_CUSTOMER_NUMBER) return "POSTNORD_CUSTOMER_NUMBER saknas i Vercel";
+  if (!process.env.POSTNORD_SENDER_ADDRESS) return "POSTNORD_SENDER_ADDRESS saknas i Vercel";
+  return null;
+}
 
 export function isPostnordBookingEnabled() {
   return (
@@ -33,10 +44,11 @@ export function isPostnordBookingEnabled() {
 }
 
 export function postnordBookingStatus(): string | null {
-  if (!process.env.POSTNORD_API_KEY) return "POSTNORD_API_KEY saknas i Vercel";
-  if (!process.env.POSTNORD_CUSTOMER_NUMBER) return "POSTNORD_CUSTOMER_NUMBER saknas i Vercel";
-  if (!process.env.POSTNORD_SENDER_ADDRESS) return "POSTNORD_SENDER_ADDRESS saknas i Vercel";
-  if (process.env.POSTNORD_BOOKING !== "on") return "Bokning hos PostNord slås på när PostNord har godkänt kopplingen";
+  const problem = postnordConfigProblem();
+  if (problem) return problem;
+  if (process.env.POSTNORD_BOOKING !== "on") {
+    return "Bokning slås på när testetiketten är kontrollerad (Inställningar → PostNord)";
+  }
   return null;
 }
 
@@ -63,9 +75,9 @@ export type BookingOrder = {
   weightGrams: number | null;
 };
 
-export type BookingResult = { trackingNumber: string; bookingId: string | null };
+export type BookingResult = { trackingNumber: string; bookingId: string | null; labelPdf: Buffer | null };
 
-function bookingBody(o: BookingOrder) {
+function bookingBody(o: BookingOrder, test: boolean) {
   const sender = senderAddress();
   const kg = Math.max(0.01, o.weightGrams ? o.weightGrams / 1000 : DEFAULT_KG);
   const weight = { value: Math.round(kg * 1000) / 1000, unit: "KGM" };
@@ -76,8 +88,9 @@ function bookingBody(o: BookingOrder) {
     messageDate: now,
     messageFunction: "Instruction",
     messageId: `${o.orderRef}-${Date.now()}`,
-    application: { name: "GetOut Operations", version: "1.0" },
-    updateIndicator: "Original",
+    application: { applicationId: applicationId(), name: "GetOut Operations", version: "1.0" },
+    // "Test" = testbokning enligt PostNord: etikett skapas men inget skickas på riktigt
+    updateIndicator: test ? "Test" : "Original",
     shipment: [
       {
         shipmentIdentification: { shipmentId: "0" },
@@ -144,6 +157,7 @@ type BookingResponse = {
     }[];
   };
   handlingResponse?: { message?: string; compositeFault?: { faults?: Fault[] } };
+  labelPrintout?: { printout?: { data?: string; dataValue?: string } }[];
   message?: string;
 };
 
@@ -152,9 +166,18 @@ function faultText(r: { message?: string; compositeFault?: { faults?: Fault[] } 
   return [r?.message, ...faults].filter(Boolean).join("; ");
 }
 
-/** Bokar en försändelse hos PostNord och returnerar kolli-ID (spårningsnumret). */
-export async function bookShipment(o: BookingOrder): Promise<BookingResult> {
-  if (!isPostnordBookingEnabled()) throw new Error(postnordBookingStatus() ?? "Bokning är inte påslagen");
+/**
+ * Bokar en försändelse hos PostNord och returnerar kolli-ID (spårningsnumret) och etiketten.
+ * Med test: true görs en testbokning (updateIndicator "Test"), som fungerar innan bokning slagits på.
+ */
+export async function bookShipment(o: BookingOrder, opts: { test?: boolean } = {}): Promise<BookingResult> {
+  const test = opts.test === true;
+  if (test) {
+    const problem = postnordConfigProblem();
+    if (problem) throw new Error(problem);
+  } else if (!isPostnordBookingEnabled()) {
+    throw new Error(postnordBookingStatus() ?? "Bokning är inte påslagen");
+  }
   for (const [label, v] of [
     ["namn", o.name],
     ["adress", o.address],
@@ -176,7 +199,7 @@ export async function bookShipment(o: BookingOrder): Promise<BookingResult> {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(bookingBody(o)),
+    body: JSON.stringify(bookingBody(o, test)),
     cache: "no-store",
   });
   const json = (await res.json().catch(() => ({}))) as BookingResponse;
@@ -188,7 +211,35 @@ export async function bookShipment(o: BookingOrder): Promise<BookingResult> {
   const ids = info?.ids ?? [];
   const item = ids.find((i) => /item/i.test(i.idType ?? "")) ?? ids[0];
   if (!item?.value) throw new Error(`PostNord gav inget kolli-ID${errorText ? `: ${errorText}` : ""}`);
-  return { trackingNumber: item.value, bookingId: json.bookingResponse?.bookingId ?? null };
+  const label = json.labelPrintout?.map((l) => l.printout?.data ?? l.printout?.dataValue).find(Boolean);
+  return {
+    trackingNumber: item.value,
+    bookingId: json.bookingResponse?.bookingId ?? null,
+    labelPdf: label ? Buffer.from(label, "base64") : null,
+  };
+}
+
+/** Testbokning till oss själva (avsändaradressen), enligt PostNords råd. Ger etiketten som PDF. */
+export async function testLabel(): Promise<BookingResult> {
+  const problem = postnordConfigProblem();
+  if (problem) throw new Error(problem);
+  const sender = senderAddress();
+  const name = process.env.POSTNORD_SENDER_NAME?.trim() || "GO now AB";
+  return bookShipment(
+    {
+      orderRef: "TEST",
+      shopifyName: null,
+      name,
+      address: sender.street,
+      postalCode: sender.postalCode,
+      city: sender.city,
+      country: "SE",
+      email: null,
+      phone: null,
+      weightGrams: 120,
+    },
+    { test: true },
+  );
 }
 
 /** PDF med etiketter för ett eller flera kolli-ID */
