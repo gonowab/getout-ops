@@ -214,6 +214,47 @@ export async function changeOrderStatus(orderId: string, status: OrderStatus): P
   }
 }
 
+export type BulkShipResult = {
+  ok: boolean;
+  shipped: number;
+  skipped: { orderNumber: number; reason: string }[];
+};
+
+/**
+ * Markerar flera ordrar som skickade på en gång. Lagret dras per order av set_order_status,
+ * precis som när man markerar en order i taget. Redan skickade och makulerade ordrar hoppas
+ * över, och en order som inte går att markera stoppar inte de andra.
+ */
+export async function markOrdersShipped(orderIds: string[]): Promise<BulkShipResult> {
+  const user = await requireUser();
+  const ids = z.array(z.string().uuid()).min(1, "Välj minst en order").max(200).parse(orderIds);
+  const rows = await sql<{ id: string; order_number: number; status: OrderStatus }[]>`
+    select id, order_number, status from orders where id in ${sql(ids)} order by order_number`;
+
+  const result: BulkShipResult = { ok: true, shipped: 0, skipped: [] };
+  for (const o of rows) {
+    if (o.status === "makulerad") {
+      result.skipped.push({ orderNumber: o.order_number, reason: "Ordern är makulerad" });
+      continue;
+    }
+    if (SHIPPED_STATUSES.includes(o.status)) {
+      result.skipped.push({ orderNumber: o.order_number, reason: "Ordern är redan skickad" });
+      continue;
+    }
+    try {
+      await sql`select set_order_status(${o.id}, 'skickad'::order_status, ${user.id}, 'Markerad som skickad (flera ordrar)')`;
+      result.shipped += 1;
+    } catch (e) {
+      console.error(e);
+      result.skipped.push({ orderNumber: o.order_number, reason: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  result.ok = result.skipped.length === 0;
+  revalidatePath("/", "layout");
+  return result;
+}
+
 const invoiceSchema = z.object({
   invoiceStatus: z.enum(["ej_fakturerad", "fakturerad", "betald"]),
   invoiceNumber: opt,

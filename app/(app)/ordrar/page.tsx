@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { EmptyState, Input, PageHeader, cn } from "@/components/ui";
 import { OrderTable } from "@/components/order-table";
+import { BulkBar, BulkProvider } from "@/components/bulk-select";
 import { NewOrderButton } from "./new-order-button";
 import { PostnordBatch } from "@/components/postnord-batch";
 import { postnordBookingStatus } from "@/lib/postnord";
@@ -141,12 +142,18 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
           )}
         </EmptyState>
       ) : (
-        <OrderTable
-          orders={orders}
-          lines={lines}
-          products={products}
-          quickAction={view === "hantera" || view === "packa" || view === "skickade"}
-        />
+        <BulkProvider
+          items={orders.map((o) => ({ id: o.id, orderNumber: o.order_number, status: o.status, qty: o.total_qty }))}
+        >
+          <BulkBar />
+          <OrderTable
+            orders={orders}
+            lines={lines}
+            products={products}
+            quickAction={view === "hantera" || view === "packa" || view === "skickade"}
+            selectable={view === "hantera" || view === "packa" || view === "alla"}
+          />
+        </BulkProvider>
       )}
     </>
   );
