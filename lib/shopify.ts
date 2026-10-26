@@ -9,8 +9,9 @@ import type { InvoiceStatus, OrderStatus } from "@/lib/types";
  * Shopify skickar en webhook när en order skapas eller ändras. Vi:
  *  1. verifierar signaturen (HMAC) mot SHOPIFY_WEBHOOK_SECRET
  *  2. skapar ordern första gången (status Bekräftad = reserverar lager och hamnar i "Att packa")
- *  3. vid senare uppdateringar: skickad i Shopify → Skickad här (drar lager),
- *     avbruten i Shopify → Makulerad här (släpper lagret)
+ *  3. vid senare uppdateringar: skickad i Shopify (etikett skapad, t.ex. via Synca) → Ska packas här.
+ *     Ordern ligger kvar under Att packa tills någon klickar Markera skickad, som drar lagret.
+ *     Avbruten i Shopify → Makulerad här (släpper lagret)
  * Allt lager hanteras av set_order_status i databasen, precis som för manuella ordrar.
  */
 
@@ -97,10 +98,11 @@ function personName(o: ShopifyOrder) {
   return clean(fromCustomer) ?? clean(fromAddress) ?? clean(o.email) ?? "Shopify-kund";
 }
 
-function desiredStatus(o: ShopifyOrder): OrderStatus {
-  if (o.cancelled_at) return "makulerad";
+/** Vad Shopify säger om ordern. "skickad" i Shopify betyder bara att etiketten är skapad. */
+function shopifyState(o: ShopifyOrder): "avbruten" | "skickad" | "oppen" {
+  if (o.cancelled_at) return "avbruten";
   if (o.fulfillment_status === "fulfilled") return "skickad";
-  return "bekraftad";
+  return "oppen";
 }
 
 function weightFromShopify(o: ShopifyOrder) {
@@ -145,7 +147,7 @@ export async function processShopifyOrder(
 
     // En äldre order (från före kopplingen) som redan är skickad eller avbruten ska inte
     // importeras när den ändras i Shopify – då skulle lagret dras i efterhand.
-    if (topic !== "orders/create" && desiredStatus(order) !== "bekraftad") {
+    if (topic !== "orders/create" && shopifyState(order) !== "oppen") {
       return {
         outcome: "ignorerad" as const,
         message: "Äldre order som redan är skickad eller avbruten – importeras inte",
@@ -168,19 +170,21 @@ async function updateExisting(
   order: ShopifyOrder,
 ): Promise<ProcessResult> {
   const changes: string[] = [];
-  const want = desiredStatus(order);
+  const state = shopifyState(order);
 
   // Vikten fylls i om den saknas (ordrar importerade innan vikten sparades)
   const weight = weightFromShopify(order);
   if (weight) await tx`update orders set weight_grams = ${weight} where id = ${existing.id} and weight_grams is null`;
-  const notShippedYet = ["ny", "bekraftad", "ska_packas"].includes(existing.status);
-
-  if (want === "makulerad" && existing.status !== "makulerad") {
+  if (state === "avbruten" && existing.status !== "makulerad") {
     await tx`select set_order_status(${existing.id}, 'makulerad'::order_status, null, 'Avbruten i Shopify')`;
     changes.push("makulerad");
-  } else if (want === "skickad" && notShippedYet) {
-    await tx`select set_order_status(${existing.id}, 'skickad'::order_status, null, 'Skickad i Shopify')`;
-    changes.push("skickad");
+  } else if (state === "skickad") {
+    // Skickad i Shopify = etiketten är klar. Ordern ska packas här och markeras som skickad för hand.
+    await tx`update orders set shopify_fulfilled_at = coalesce(shopify_fulfilled_at, now()) where id = ${existing.id}`;
+    if (["ny", "bekraftad"].includes(existing.status)) {
+      await tx`select set_order_status(${existing.id}, 'ska_packas'::order_status, null, 'Skickad i Shopify – redo att packas')`;
+      changes.push("ska packas");
+    }
   }
 
   // Spårningsnummer som lagts in i Shopify (t.ex. av Synca) sparas här också om vi saknar det
@@ -315,8 +319,10 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
   await tx`insert into order_events (order_id, kind, to_value, note)
            values (${created.id}, 'skapad', 'ny', ${`Importerad från Shopify ${name}`})`;
 
-  const want = desiredStatus(order);
+  const state = shopifyState(order);
+  const want: OrderStatus = state === "avbruten" ? "makulerad" : state === "skickad" ? "ska_packas" : "bekraftad";
   await tx`select set_order_status(${created.id}, ${want}::order_status, null, 'Shopify')`;
+  if (state === "skickad") await tx`update orders set shopify_fulfilled_at = now() where id = ${created.id}`;
 
   const qty = [...lines.values()].reduce((s, l) => s + l.qty, 0);
   return {

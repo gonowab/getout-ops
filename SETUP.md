@@ -41,7 +41,8 @@ Appen visar inte sidor för sökmotorer, och Supabase publika API är avstängt 
    `SHOPIFY_WEBHOOK_SECRET` (typ Secret). Driftsätt om.
 4. Testa med **Skicka testavisering** på en webhook. Den syns under Inställningar → Senast från Shopify.
 
-Nya ordrar hamnar under Att packa. Skickas de i Shopify blir de Skickade här och dras från lagret.
+Nya ordrar hamnar under Att packa. Markeras de som skickade i Shopify (t.ex. via Synca) ligger de kvar
+under Att packa – de blir Skickade här och dras från lagret först när man klickar Markera skickad.
 Avbryts de i Shopify blir de Makulerade. Äldre, redan skickade ordrar importeras aldrig.
 En öppen äldre order hämtas in genom att man ändrar den i Shopify, t.ex. lägger till en tagg.
 
@@ -55,7 +56,8 @@ En öppen äldre order hämtas in genom att man ändrar den i Shopify, t.ex. lä
 
 Allt skickas med PostNord Home Small Prio (tjänstekod 86). Orderns vikt hämtas från Shopify.
 När spårningsnumret skickas markeras ordern som skickad i Shopify,
-kunden får Shopifys leveransmejl med spårningslänk och ordern blir Skickad här (lagret dras).
+kunden får Shopifys leveransmejl med spårningslänk och ordern hamnar under Att packa. Den blir Skickad
+(och lagret dras) först när någon klickar Markera skickad.
 
 ## PostNord – bokning direkt från appen
 
@@ -68,7 +70,8 @@ kunden får Shopifys leveransmejl med spårningslänk och ordern blir Skickad h�
      `POSTNORD_BASE_URL=https://atapi2.postnord.com` för PostNords testmiljö.
 
 Under **Ordrar → Att packa** listas webbshoppens ordrar. **Boka** bokar Home Small Prio för de markerade,
-lägger in kolli-ID i Shopify (kunden får mejl med spårningslänk) och sätter ordrarna som Skickade.
+lägger in kolli-ID i Shopify (kunden får mejl med spårningslänk). Ordrarna ligger kvar under Att packa
+tills de markeras som skickade.
 **Skriv ut etiketterna** öppnar en PDF. Dagens etiketter kan skrivas ut igen hela dagen.
 Ordrar över 3 kg bokas inte (gränsen för Home Small).
 
