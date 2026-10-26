@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { PageHeader, cn } from "@/components/ui";
+import { PageHeader, buttonClass, cn } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { getProducts } from "@/lib/queries";
 import { dateTime } from "@/lib/format";
 import { isDevAuth } from "@/lib/supabase/server";
+import { postnordConfigProblem } from "@/lib/postnord";
 import { PasswordForm, ShopifyEditionForm, ThresholdForm } from "./forms";
 
 export const metadata = { title: "Inställningar" };
@@ -48,6 +49,8 @@ export default async function SettingsPage() {
   } catch {
     events = null;
   }
+
+  const postnordProblem = postnordConfigProblem();
 
   return (
     <>
@@ -105,6 +108,27 @@ export default async function SettingsPage() {
               </div>
             )}
           </>
+        )}
+      </section>
+
+      <section className="mb-12 max-w-[640px]">
+        <h2 className="mb-1 text-[15px] font-semibold">PostNord</h2>
+        <p className="mb-4 text-[13px] text-muted">
+          Gör en testbokning till er själva och kontrollera att etiketten ser rätt ut: avsändare, mottagare och
+          Home Small Prio. Inget skickas på riktigt. När allt stämmer slås riktig bokning på med{" "}
+          <code className="text-ink">POSTNORD_BOOKING = on</code> i Vercel.
+        </p>
+        {postnordProblem ? (
+          <p className="rounded-md bg-warn-soft px-3 py-2 text-[13px] text-warn">{postnordProblem}</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <a href="/api/postnord/test" target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
+              Gör en testetikett
+            </a>
+            <span className="text-[13px] text-muted">
+              Riktig bokning: {process.env.POSTNORD_BOOKING === "on" ? "påslagen" : "avstängd"}
+            </span>
+          </div>
         )}
       </section>
 

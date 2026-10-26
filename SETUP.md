@@ -64,8 +64,11 @@ kunden får Shopifys leveransmejl med spårningslänk och ordern hamnar under At
 1. Kör `supabase/migrations/0005_postnord_bokning.sql` i Supabase SQL Editor (en gång).
 2. I Vercel, utöver `POSTNORD_API_KEY` och `POSTNORD_CUSTOMER_NUMBER`:
    - `POSTNORD_SENDER_ADDRESS` – avsändaradressen, t.ex. `Storgatan 1, 211 22 Malmö`
-   - `POSTNORD_BOOKING` = `on` – först när PostNord har godkänt bokning via API.
-     Innan dess skickas inga bokningar (ogiltiga bokningar kan kosta pengar).
+   - `POSTNORD_BOOKING` = `on` – först när testetiketten är kontrollerad (se nedan).
+     Innan dess bokas inga riktiga försändelser.
+3. **Inställningar → PostNord → Gör en testetikett** gör en testbokning till er själva
+   (updateIndicator "Test", som PostNord rekommenderar) och visar etiketten. Applikations-ID 2758
+   skickas med automatiskt (kan ändras med `POSTNORD_APPLICATION_ID`).
    - Valfritt: `POSTNORD_PAPER_SIZE` (A4, A5, A6 eller LABEL, standard A4) och
      `POSTNORD_BASE_URL=https://atapi2.postnord.com` för PostNords testmiljö.
 
