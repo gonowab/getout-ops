@@ -51,7 +51,7 @@ export type ShopifyOrder = {
   fulfillment_status?: string | null;
   taxes_included?: boolean | null;
   total_weight?: number | null; // gram
-  fulfillments?: { tracking_number?: string | null; status?: string | null }[];
+  fulfillments?: { tracking_number?: string | null; status?: string | null; created_at?: string | null }[];
   customer?: {
     id?: number | string | null;
     email?: string | null;
@@ -140,14 +140,19 @@ export async function processShopifyOrder(
   }
 
   const result = await sql.begin(async (tx) => {
+    // Shopify skickar ofta flera meddelanden om samma order samtidigt (Ny order + Ändrad).
+    // Låset gör att de hanteras en i taget, så att ordern och kunden inte skapas två gånger.
+    await tx`select pg_advisory_xact_lock(hashtext(${`shopify-order:${shopifyId}`}))`;
     const [existing] = await tx<{ id: string; order_number: number; status: OrderStatus; invoice_status: InvoiceStatus }[]>`
       select id, order_number, status, invoice_status from orders where shopify_order_id = ${shopifyId} for update`;
 
     if (existing) return updateExisting(tx, existing, order);
 
-    // En äldre order (från före kopplingen) som redan är skickad eller avbruten ska inte
-    // importeras när den ändras i Shopify – då skulle lagret dras i efterhand.
-    if (topic !== "orders/create" && shopifyState(order) !== "oppen") {
+    // En order som missats (t.ex. för att produkten inte var kopplad) hämtas in när den ändras
+    // i Shopify, om den är från de senaste 14 dagarna. Äldre, redan skickade eller avbrutna
+    // ordrar importeras inte – då skulle lagret dras för gamla försäljningar.
+    const recent = Date.now() - new Date(order.created_at ?? 0).getTime() < 14 * 24 * 3600 * 1000;
+    if (topic !== "orders/create" && shopifyState(order) !== "oppen" && !(recent && shopifyState(order) === "skickad")) {
       return {
         outcome: "ignorerad" as const,
         message: "Äldre order som redan är skickad eller avbruten – importeras inte",
@@ -210,7 +215,10 @@ async function updateExisting(
 async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: string): Promise<ProcessResult> {
   // Produktkoppling: Shopify-variant → kortlek (gammal eller ny ask, styrs under Inställningar)
   const mapped = await tx<{ id: number; shopify_variant_id: string }[]>`
-    select id, shopify_variant_id from products where shopify_variant_id is not null and active`;
+    select id, shopify_variant_id from products where shopify_variant_id is not null and active
+    union all
+    select v.product_id, v.shopify_variant_id from shopify_variants v join products p on p.id = v.product_id
+    where p.active`;
   const byVariant = new Map(mapped.map((p) => [p.shopify_variant_id, p.id]));
   const taxesIncluded = order.taxes_included !== false;
 
@@ -221,7 +229,7 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
     if (qty <= 0) continue;
     const productId = li.variant_id != null ? byVariant.get(String(li.variant_id)) : undefined;
     if (!productId) {
-      unknown.push(`${li.title ?? "Okänd produkt"} × ${qty}`);
+      unknown.push(`${li.title ?? "Okänd produkt"} × ${qty}${li.variant_id != null ? ` [variant ${li.variant_id}]` : ""}`);
       continue;
     }
     const cur = lines.get(productId) ?? { qty: 0, net: 0 };
@@ -274,6 +282,7 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
         country: clean(ship.country_code) ?? "SE",
         shopify_customer_id: shopifyCustomerId,
       })}
+      on conflict (shopify_customer_id) do update set updated_at = customers.updated_at
       returning id`;
     customerId = c.id;
   }
@@ -320,9 +329,21 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
            values (${created.id}, 'skapad', 'ny', ${`Importerad från Shopify ${name}`})`;
 
   const state = shopifyState(order);
-  const want: OrderStatus = state === "avbruten" ? "makulerad" : state === "skickad" ? "ska_packas" : "bekraftad";
+  // Skickad i Shopify idag (etiketten är nyss gjord) → Att packa. Skickad tidigare dagar → redan
+  // iväg, så den blir Skickad direkt och lagret dras (gäller ordrar som hämtas in i efterhand).
+  const fulfilledAt = (order.fulfillments ?? []).map((f) => f.created_at).filter(Boolean).sort()[0] ?? null;
+  const fulfilledEarlier = state === "skickad" && fulfilledAt != null && stockholmDate(fulfilledAt) < stockholmDate(null);
+  const want: OrderStatus =
+    state === "avbruten" ? "makulerad" : state === "skickad" ? (fulfilledEarlier ? "skickad" : "ska_packas") : "bekraftad";
   await tx`select set_order_status(${created.id}, ${want}::order_status, null, 'Shopify')`;
-  if (state === "skickad") await tx`update orders set shopify_fulfilled_at = now() where id = ${created.id}`;
+  if (state === "skickad") {
+    await tx`update orders set shopify_fulfilled_at = ${fulfilledAt ?? new Date().toISOString()} where id = ${created.id}`;
+  }
+  const tracking = (order.fulfillments ?? []).map((f) => clean(f.tracking_number)).find(Boolean);
+  if (tracking) await tx`update orders set tracking_number = ${tracking} where id = ${created.id}`;
+  if (want === "skickad" && fulfilledAt) {
+    await tx`update orders set shipped_at = ${fulfilledAt} where id = ${created.id}`;
+  }
 
   const qty = [...lines.values()].reduce((s, l) => s + l.qty, 0);
   return {

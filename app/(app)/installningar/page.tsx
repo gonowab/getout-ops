@@ -6,7 +6,7 @@ import { getProducts } from "@/lib/queries";
 import { dateTime } from "@/lib/format";
 import { isDevAuth } from "@/lib/supabase/server";
 import { postnordConfigProblem } from "@/lib/postnord";
-import { PasswordForm, ShopifyEditionForm, ThresholdForm } from "./forms";
+import { PasswordForm, ShopifyEditionForm, ShopifyVariantsForm, ThresholdForm } from "./forms";
 
 export const metadata = { title: "Inställningar" };
 
@@ -49,6 +49,14 @@ export default async function SettingsPage() {
   } catch {
     events = null;
   }
+  // Extra Shopify-produkter (tål att databasuppdateringen 0006 inte körts än)
+  let variants: { shopify_variant_id: string; product_id: number; title: string | null }[] | null = null;
+  try {
+    variants = await sql<{ shopify_variant_id: string; product_id: number; title: string | null }[]>`
+      select shopify_variant_id, product_id, title from shopify_variants order by created_at`;
+  } catch {
+    variants = null;
+  }
 
   const postnordProblem = postnordConfigProblem();
 
@@ -69,6 +77,19 @@ export default async function SettingsPage() {
         ) : (
           <>
             <ShopifyEditionForm mapping={mapping} />
+
+            <h3 className="mb-1 mt-8 text-[13px] font-semibold">Fler Shopify-produkter</h3>
+            <p className="mb-3 text-[13px] text-muted">
+              Säljs en kortlek som en egen produkt i Shopify, koppla den här. Står en order som
+              ”Inga kortlekar i ordern” nedan, finns produktens variant-ID inom hakparentes i meddelandet.
+            </p>
+            {variants === null ? (
+              <p className="rounded-md bg-warn-soft px-3 py-2 text-[13px] text-warn">
+                Databasuppdateringen 0006_shopify_produkter.sql är inte körd än.
+              </p>
+            ) : (
+              <ShopifyVariantsForm products={products} variants={variants} />
+            )}
 
             <h3 className="mb-2 mt-8 text-[13px] font-semibold">Senast från Shopify</h3>
             {events.length === 0 ? (

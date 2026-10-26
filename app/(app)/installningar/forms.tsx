@@ -6,7 +6,7 @@ import { Button, EditionTag, Field, Input } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { changePassword } from "@/lib/actions/auth";
 import { updateThreshold } from "@/lib/actions/inventory";
-import { setShopifyEdition } from "@/lib/actions/shopify";
+import { addShopifyVariant, removeShopifyVariant, setShopifyEdition } from "@/lib/actions/shopify";
 import { Segmented } from "@/components/order-form";
 import type { Product } from "@/lib/types";
 
@@ -118,6 +118,103 @@ export function ShopifyEditionForm({ mapping }: { mapping: { region: string; edi
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+export function ShopifyVariantsForm({
+  products,
+  variants,
+}: {
+  products: Product[];
+  variants: { shopify_variant_id: string; product_id: number; title: string | null }[];
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  const [variantId, setVariantId] = useState("");
+  const [productId, setProductId] = useState<number>(products.find((p) => p.edition === "ny")?.id ?? products[0]?.id);
+  const byId = new Map(products.map((p) => [p.id, p]));
+
+  const run = (fn: () => Promise<{ ok: boolean; message?: string; error?: string }>, after?: () => void) =>
+    start(async () => {
+      const res = await fn();
+      if (!res.ok) toast({ kind: "error", text: res.error ?? "Något gick fel" });
+      else {
+        toast({ kind: "ok", text: res.message ?? "Sparat" });
+        after?.();
+        router.refresh();
+      }
+    });
+
+  return (
+    <div className="flex flex-col gap-3">
+      {variants.length ? (
+        <div className="overflow-hidden rounded-xl border border-line">
+          {variants.map((v, i) => {
+            const p = byId.get(v.product_id);
+            return (
+              <div
+                key={v.shopify_variant_id}
+                className={`flex items-center justify-between gap-4 px-4 py-2 text-[13px] ${i > 0 ? "border-t border-line" : ""}`}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-ink">{v.title ?? `Variant ${v.shopify_variant_id}`}</span>
+                  <span className="text-[12px] text-muted tabular">{v.shopify_variant_id}</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  {p ? (
+                    <span className="flex items-center gap-2">
+                      {p.region} <EditionTag edition={p.edition} />
+                    </span>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => run(() => removeShopifyVariant(v.shopify_variant_id))}
+                  >
+                    Ta bort
+                  </Button>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+      <form
+        className="flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          run(() => addShopifyVariant(variantId, productId), () => setVariantId(""));
+        }}
+      >
+        <Field label="Variant-ID från Shopify">
+          <Input
+            value={variantId}
+            onChange={(e) => setVariantId(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            placeholder="t.ex. 64071120027978"
+            className="w-56 tabular"
+          />
+        </Field>
+        <Field label="Kortlek">
+          <select
+            className="h-8 rounded-md border border-line bg-surface px-2 text-[14px] text-ink"
+            value={productId}
+            onChange={(e) => setProductId(parseInt(e.target.value, 10))}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.region} – {p.edition === "gammal" ? "gammal ask" : "ny ask"}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Button type="submit" variant="secondary" disabled={pending || variantId.length < 6}>
+          Koppla
+        </Button>
+      </form>
     </div>
   );
 }
