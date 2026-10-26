@@ -67,7 +67,7 @@ kunden får Shopifys leveransmejl med spårningslänk och ordern hamnar under At
    - `POSTNORD_BOOKING` = `on` – först när testetiketten är kontrollerad (se nedan).
      Innan dess bokas inga riktiga försändelser.
 3. **Inställningar → PostNord → Gör en testetikett** gör en testbokning till er själva
-   (updateIndicator "Test", som PostNord rekommenderar) och visar etiketten. Applikations-ID 2758
+   (testIndicator: true – ingen EDI skickas till PostNord) och visar etiketten. Applikations-ID 2758
    skickas med automatiskt (kan ändras med `POSTNORD_APPLICATION_ID`).
    - Valfritt: `POSTNORD_PAPER_SIZE` (A4, A5, A6 eller LABEL, standard A4) och
      `POSTNORD_BASE_URL=https://atapi2.postnord.com` för PostNords testmiljö.
