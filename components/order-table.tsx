@@ -2,8 +2,9 @@ import Link from "next/link";
 import { cn } from "@/components/ui";
 import { InvoiceBadge, SourceLabel, StatusBadge } from "@/components/badges";
 import { QuickStatusButton } from "@/components/order-actions";
+import { HeaderCheckbox, RowCheckbox } from "@/components/bulk-select";
 import { num, shortDate } from "@/lib/format";
-import { orderRef } from "@/lib/labels";
+import { orderRef, SHIPPED_STATUSES } from "@/lib/labels";
 import type { OrderLine, OrderRow, Product } from "@/lib/types";
 
 export function ProductChips({ lines, products }: { lines: OrderLine[]; products: Product[] }) {
@@ -34,18 +35,26 @@ export function OrderTable({
   products,
   quickAction = false,
   hideCustomer = false,
+  selectable = false,
 }: {
   orders: OrderRow[];
   lines: Map<string, OrderLine[]>;
   products: Product[];
   quickAction?: boolean;
   hideCustomer?: boolean;
+  /** Kryssrutor för att välja flera ordrar. Kräver att tabellen ligger inom BulkProvider. */
+  selectable?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-line">
       <table className="w-full min-w-[860px] text-[13px]">
         <thead className="bg-canvas text-left text-[12px] text-muted">
           <tr>
+            {selectable ? (
+              <th className="w-10 py-2 pl-4 pr-0">
+                <HeaderCheckbox />
+              </th>
+            ) : null}
             <th className="px-4 py-2 font-medium">Order</th>
             {!hideCustomer ? <th className="px-4 py-2 font-medium">Kund</th> : null}
             <th className="px-4 py-2 font-medium">Kortlekar</th>
@@ -62,6 +71,11 @@ export function OrderTable({
               key={o.id}
               className={cn("relative border-t border-line hover:bg-canvas", o.status === "makulerad" && "opacity-60")}
             >
+              {selectable ? (
+                <td className="relative z-10 w-10 py-2.5 pl-4 pr-0">
+                  <RowCheckbox id={o.id} />
+                </td>
+              ) : null}
               <td className="whitespace-nowrap px-4 py-2.5">
                 <Link href={`/ordrar/${o.order_number}`} prefetch={false} className="font-medium text-ink after:absolute after:inset-0">
                   {orderRef(o.order_number)}
@@ -85,6 +99,9 @@ export function OrderTable({
               <td className="px-4 py-2.5 text-right font-medium tabular">{num(o.total_qty)}</td>
               <td className="whitespace-nowrap px-4 py-2.5">
                 <StatusBadge status={o.status} />
+                {o.postnord_booked_at && !SHIPPED_STATUSES.includes(o.status) && o.status !== "makulerad" ? (
+                  <div className="mt-0.5 text-[12px] text-subtle">Frakt bokad</div>
+                ) : null}
               </td>
               <td className="whitespace-nowrap px-4 py-2.5">
                 {o.source === "shopify" && o.invoice_status === "betald" ? (

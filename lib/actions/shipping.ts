@@ -53,10 +53,11 @@ const SHIP_COLUMNS = sql`
 
 /**
  * Efter att spårningsnumret är sparat: markera ordern som skickad i Shopify (kunden får
- * mejl med spårningslänk) och lägg den under Att packa (Ska packas). Den blir Skickad här,
- * och lagret dras, först när någon klickar Markera skickad.
+ * mejl med spårningslänk). Med markShipped sätts ordern också som Skickad här, vilket drar
+ * lagret. Vid PostNord-bokning är markShipped av: ordern ligger kvar under Att packa tills
+ * någon markerar den som skickad när paketet har lämnats.
  */
-async function finishShipped(o: ShipRow, tracking: string, userId: string, how: string) {
+async function finishShipped(o: ShipRow, tracking: string, userId: string, how: string, markShipped = true) {
   let shopifyNote = "";
   if (o.shopify_order_id && !o.shopify_fulfilled_at) {
     const result = await fulfillWithTracking(o.shopify_order_id, tracking, true);
@@ -67,8 +68,8 @@ async function finishShipped(o: ShipRow, tracking: string, userId: string, how: 
   await sql`insert into order_events (order_id, kind, note, created_by)
             values (${o.id}, 'andrad', ${`${how} ${tracking}${shopifyNote ? `. ${shopifyNote}` : ""}`}, ${userId})`;
 
-  if (["ny", "bekraftad"].includes(o.status)) {
-    await sql`select set_order_status(${o.id}, 'ska_packas'::order_status, ${userId}, ${how})`;
+  if (markShipped && ["ny", "bekraftad", "ska_packas"].includes(o.status)) {
+    await sql`select set_order_status(${o.id}, 'skickad'::order_status, ${userId}, ${how})`;
   }
   return shopifyNote;
 }
@@ -101,8 +102,9 @@ export type BookResult = {
 };
 
 /**
- * Bokar Home Small Prio hos PostNord för valda ordrar. För varje order: kolli-ID sparas,
- * ordern markeras som skickad i Shopify (kunden mejlas) och ligger kvar under Att packa.
+ * Bokar Home Small Prio hos PostNord för valda ordrar. För varje order: kolli-ID sparas och
+ * ordern markeras som skickad i Shopify (kunden mejlas). Ordern behåller sin status här och
+ * ligger kvar under Att packa; den markeras som skickad separat när paketet har lämnats.
  * Etiketterna skrivs sedan ut via /api/etiketter.
  */
 export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> {
@@ -136,7 +138,7 @@ export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> 
       result.booked.push({ orderNumber: o.order_number, trackingNumber: booking.trackingNumber });
 
       try {
-        await finishShipped(o, booking.trackingNumber, user.id, "Bokad hos PostNord, kolli-ID");
+        await finishShipped(o, booking.trackingNumber, user.id, "Bokad hos PostNord, kolli-ID", false);
       } catch (e) {
         // Bokningen är gjord – bara Shopify-steget misslyckades
         result.failed.push({

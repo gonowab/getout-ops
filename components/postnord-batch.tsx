@@ -56,7 +56,7 @@ export function PostnordBatch({
           <h2 className="text-[14px] font-semibold text-ink">Boka hos PostNord</h2>
           <p className="text-[12px] text-muted">
             {bookingBlocked ??
-              "Home Small Prio. Kunden får spårningslänken direkt. Markera som skickad när paketet har lämnats."}
+              "Home Small Prio. Spårningsnumret läggs in i Shopify och kunden får ett mejl direkt. Ordern ligger kvar under Att packa tills du markerar den som skickad."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
