@@ -89,8 +89,9 @@ function bookingBody(o: BookingOrder, test: boolean) {
     messageFunction: "Instruction",
     messageId: `${o.orderRef}-${Date.now()}`,
     application: { applicationId: applicationId(), name: "GetOut Operations", version: "1.0" },
-    // "Test" = testbokning enligt PostNord: etikett skapas men inget skickas på riktigt
-    updateIndicator: test ? "Test" : "Original",
+    updateIndicator: "Original",
+    // Testbokning: valideras och ger en testetikett, men ingen EDI skickas till PostNord
+    ...(test ? { testIndicator: true } : {}),
     shipment: [
       {
         shipmentIdentification: { shipmentId: "0" },
@@ -146,7 +147,12 @@ function bookingBody(o: BookingOrder, test: boolean) {
   };
 }
 
-type Fault = { explanationText?: string; faultCode?: string };
+type Fault = {
+  explanationText?: string;
+  faultCode?: string;
+  paramValues?: { param?: string; value?: string }[];
+  faultReferences?: { key?: string; value?: string }[];
+};
 type BookingResponse = {
   bookingResponse?: {
     bookingId?: string;
@@ -157,18 +163,27 @@ type BookingResponse = {
     }[];
   };
   handlingResponse?: { message?: string; compositeFault?: { faults?: Fault[] } };
+  compositeFault?: { faults?: Fault[] };
   labelPrintout?: { printout?: { data?: string; dataValue?: string } }[];
   message?: string;
 };
 
+/** PostNords fel i klartext, med vilket fält det gäller när de anger det */
 function faultText(r: { message?: string; compositeFault?: { faults?: Fault[] } } | undefined) {
-  const faults = r?.compositeFault?.faults?.map((f) => f.explanationText ?? f.faultCode).filter(Boolean) ?? [];
+  const faults =
+    r?.compositeFault?.faults?.map((f) => {
+      const where = [...(f.paramValues ?? []), ...(f.faultReferences ?? []).map((x) => ({ param: x.key, value: x.value }))]
+        .map((p) => [p.param, p.value].filter(Boolean).join("="))
+        .filter(Boolean)
+        .join(", ");
+      return [f.faultCode, f.explanationText, where ? `(${where})` : ""].filter(Boolean).join(" ");
+    }) ?? [];
   return [r?.message, ...faults].filter(Boolean).join("; ");
 }
 
 /**
  * Bokar en försändelse hos PostNord och returnerar kolli-ID (spårningsnumret) och etiketten.
- * Med test: true görs en testbokning (updateIndicator "Test"), som fungerar innan bokning slagits på.
+ * Med test: true görs en testbokning (testIndicator), som fungerar innan bokning slagits på.
  */
 export async function bookShipment(o: BookingOrder, opts: { test?: boolean } = {}): Promise<BookingResult> {
   const test = opts.test === true;
@@ -202,11 +217,23 @@ export async function bookShipment(o: BookingOrder, opts: { test?: boolean } = {
     body: JSON.stringify(bookingBody(o, test)),
     cache: "no-store",
   });
-  const json = (await res.json().catch(() => ({}))) as BookingResponse;
+  const raw = await res.text();
+  let json: BookingResponse = {};
+  try {
+    json = JSON.parse(raw) as BookingResponse;
+  } catch {
+    json = {};
+  }
   const info = json.bookingResponse?.idInformation?.[0];
-  const errorText = faultText(info?.errorResponse) || faultText(json.handlingResponse) || json.message;
+  const errorText =
+    faultText(info?.errorResponse) ||
+    faultText(json.handlingResponse) ||
+    faultText({ message: json.message, compositeFault: json.compositeFault });
 
-  if (!res.ok) throw new Error(`PostNord (${res.status}): ${errorText || "okänt fel"}`);
+  if (!res.ok) {
+    console.error("[postnord] bokning nekad", res.status, raw.slice(0, 2000));
+    throw new Error(`PostNord (${res.status}): ${errorText || raw.slice(0, 500) || "okänt fel"}`);
+  }
 
   const ids = info?.ids ?? [];
   const item = ids.find((i) => /item/i.test(i.idType ?? "")) ?? ids[0];
