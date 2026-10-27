@@ -135,6 +135,15 @@ export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> 
       // Spara bokningen direkt, så att den aldrig görs två gånger
       await sql`update orders set tracking_number = ${booking.trackingNumber}, postnord_booked_at = now(),
                 postnord_booking_id = ${booking.bookingId} where id = ${o.id}`;
+      // Etiketten kommer med i PostNords svar – spara den så att den kan skrivas ut när som helst
+      if (booking.labelPdf) {
+        try {
+          await sql`insert into postnord_labels (order_id, pdf) values (${o.id}, ${booking.labelPdf})
+                    on conflict (order_id) do update set pdf = excluded.pdf, created_at = now()`;
+        } catch (e) {
+          console.error("[postnord] kunde inte spara etiketten", e);
+        }
+      }
       result.booked.push({ orderNumber: o.order_number, trackingNumber: booking.trackingNumber });
 
       try {

@@ -238,7 +238,7 @@ export async function bookShipment(o: BookingOrder, opts: { test?: boolean } = {
   const ids = info?.ids ?? [];
   const item = ids.find((i) => /item/i.test(i.idType ?? "")) ?? ids[0];
   if (!item?.value) throw new Error(`PostNord gav inget kolli-ID${errorText ? `: ${errorText}` : ""}`);
-  const label = json.labelPrintout?.map((l) => l.printout?.data ?? l.printout?.dataValue).find(Boolean);
+  const label = findPdfData(json.labelPrintout) ?? findPdfData(json);
   return {
     trackingNumber: item.value,
     bookingId: json.bookingResponse?.bookingId ?? null,
@@ -283,12 +283,46 @@ export async function fetchLabels(trackingNumbers: string[]): Promise<Buffer> {
     body: JSON.stringify(trackingNumbers.map((id) => ({ id }))),
     cache: "no-store",
   });
-  type Printout = { printout?: { data?: string; dataValue?: string } };
-  const json = (await res.json().catch(() => null)) as Printout[] | { labelPrintout?: Printout[] } | null;
-  if (!res.ok) throw new Error(`PostNord kunde inte skapa etiketterna (${res.status})`);
-
-  const list = Array.isArray(json) ? json : (json?.labelPrintout ?? []);
-  const data = list.map((l) => l.printout?.data ?? l.printout?.dataValue).find(Boolean);
-  if (!data) throw new Error("PostNord skickade ingen etikett");
+  const raw = await res.text();
+  if (!res.ok) {
+    console.error("[postnord] etiketter nekade", res.status, raw.slice(0, 2000));
+    throw new Error(`PostNord kunde inte skapa etiketterna (${res.status}): ${raw.slice(0, 300)}`);
+  }
+  // Svaret kan se lite olika ut – leta upp första base64-PDF:en var den än ligger
+  let json: unknown = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    json = null;
+  }
+  const data = findPdfData(json);
+  if (!data) {
+    console.error("[postnord] ingen etikett i svaret", raw.slice(0, 2000));
+    throw new Error(`PostNord skickade ingen etikett. Svar: ${raw.slice(0, 300) || "(tomt)"}`);
+  }
   return Buffer.from(data, "base64");
+}
+
+/** Letar igenom PostNords svar efter etikettdata (data/dataValue med en base64-kodad PDF) */
+function findPdfData(node: unknown, depth = 0): string | null {
+  if (!node || depth > 8) return null;
+  if (Array.isArray(node)) {
+    for (const x of node) {
+      const hit = findPdfData(x, depth + 1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (typeof node === "object") {
+    const o = node as Record<string, unknown>;
+    for (const key of ["data", "dataValue"]) {
+      const v = o[key];
+      if (typeof v === "string" && v.startsWith("JVBER")) return v; // "%PDF" i base64
+    }
+    for (const v of Object.values(o)) {
+      const hit = findPdfData(v, depth + 1);
+      if (hit) return hit;
+    }
+  }
+  return null;
 }
