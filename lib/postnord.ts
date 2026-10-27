@@ -11,7 +11,7 @@ import "server-only";
  *   POSTNORD_CUSTOMER_NUMBER  – kundnumret (20991222)
  *   POSTNORD_SENDER_ADDRESS   – avsändaradress, t.ex. "Storgatan 1, 211 22 Malmö"
  *   POSTNORD_SENDER_NAME      – valfritt, standard "GO now AB"
- *   POSTNORD_PAPER_SIZE       – valfritt etikettformat (A4, A5, A6, LABEL), standard A4
+ *   POSTNORD_PAPER_SIZE       – valfritt etikettformat (A4, A5, A6, LABEL), standard LABEL
  *   POSTNORD_APPLICATION_ID   – valfritt, standard 2758 (vårt applikations-ID från PostNord)
  *   POSTNORD_BOOKING          – "on" när testbokningen har kontrollerats. Innan dess bokas
  *                               inga riktiga försändelser, bara testetiketter (se testLabel).
@@ -22,8 +22,8 @@ const BASE = process.env.POSTNORD_BASE_URL?.trim() || "https://api2.postnord.com
 const SERVICE_CODE = "86"; // Home Small Prio
 const ISSUER = "Z12"; // PostNord Sverige
 const MAX_KG = 3;
-// Etikettformat: A4, A5, A6, LABEL … (standard A4 = vanligt skrivarpapper)
-const paperSize = () => process.env.POSTNORD_PAPER_SIZE?.trim().toUpperCase() || "A4";
+// Etikettformat: A4, A5, A6, LABEL. Standard LABEL = sida i etikettstorlek, som i PostNords portal
+const paperSize = () => process.env.POSTNORD_PAPER_SIZE?.trim().toUpperCase() || "LABEL";
 const DEFAULT_KG = 0.25;
 // Applikations-ID som PostNord tilldelat GetOut Operations (krävs för Booking API)
 const applicationId = () => parseInt(process.env.POSTNORD_APPLICATION_ID?.trim() || "2758", 10);
