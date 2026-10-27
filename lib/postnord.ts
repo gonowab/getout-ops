@@ -210,6 +210,8 @@ export async function bookShipment(o: BookingOrder, opts: { test?: boolean } = {
   const url = new URL("/rest/shipment/v3/edi/labels/pdf", BASE);
   url.searchParams.set("apikey", process.env.POSTNORD_API_KEY!);
   url.searchParams.set("paperSize", paperSize());
+  // PostNord sparar etiketten så att den kan hämtas igen med kolli-ID:t (annars "id not found")
+  url.searchParams.set("storeLabel", "true");
 
   const res = await fetch(url, {
     method: "POST",
