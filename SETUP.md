@@ -69,7 +69,7 @@ kunden får Shopifys leveransmejl med spårningslänk och ordern hamnar under At
 3. **Inställningar → PostNord → Gör en testetikett** gör en testbokning till er själva
    (testIndicator: true – ingen EDI skickas till PostNord) och visar etiketten. Applikations-ID 2758
    skickas med automatiskt (kan ändras med `POSTNORD_APPLICATION_ID`).
-   - Valfritt: `POSTNORD_PAPER_SIZE` (A4, A5, A6 eller LABEL, standard A4) och
+   - Valfritt: `POSTNORD_PAPER_SIZE` (A4, A5, A6 eller LABEL, standard LABEL = etikettstorlek) och
      `POSTNORD_BASE_URL=https://atapi2.postnord.com` för PostNords testmiljö.
 
 Under **Ordrar → Att packa** listas webbshoppens ordrar. **Boka** bokar Home Small Prio för de markerade,
