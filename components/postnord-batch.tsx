@@ -23,7 +23,10 @@ export function PostnordBatch({
   const router = useRouter();
   const { toast } = useToast();
   const [pending, start] = useTransition();
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(rows.filter((r) => r.ready).map((r) => r.id)));
+  // Inget är ikryssat från början: varje bokning är en riktig, betald försändelse
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const readyIds = rows.filter((r) => r.ready).map((r) => r.id);
+  const allSelected = readyIds.length > 0 && readyIds.every((id) => selected.has(id));
   const [result, setResult] = useState<BookResult | null>(null);
 
   const toggle = (id: string) =>
@@ -64,6 +67,15 @@ export function PostnordBatch({
             <a href={labelLink(bookedToday)} target="_blank" rel="noreferrer" className={buttonClass("secondary")}>
               <Printer className="size-3.5" /> Dagens etiketter ({bookedToday.length})
             </a>
+          ) : null}
+          {readyIds.length ? (
+            <Button
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setSelected(allSelected ? new Set() : new Set(readyIds))}
+            >
+              {allSelected ? "Avmarkera alla" : "Markera alla"}
+            </Button>
           ) : null}
           {rows.length ? (
             <Button variant="primary" onClick={book} disabled={pending || selected.size === 0 || Boolean(bookingBlocked)}>
