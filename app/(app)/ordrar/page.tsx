@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { EmptyState, Input, PageHeader, cn } from "@/components/ui";
+import { OrderSummary } from "@/components/order-summary";
 import { OrderTable } from "@/components/order-table";
 import { BulkBar, BulkProvider } from "@/components/bulk-select";
 import { NewOrderButton } from "./new-order-button";
 import { PostnordBatch } from "@/components/postnord-batch";
 import { postnordBookingStatus } from "@/lib/postnord";
-import { getOrderLinesFor, getOrders, getProducts, type OrderFilter } from "@/lib/queries";
+import { getOrderLinesFor, getOrders, getProducts, getOrderSummary, type OrderFilter } from "@/lib/queries";
 import { sql } from "@/lib/db";
 
 export const metadata = { title: "Ordrar" };
@@ -34,9 +35,10 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
   const source = typeof sp.kanal === "string" ? sp.kanal : "";
   const q = typeof sp.q === "string" ? sp.q : "";
 
-  const [orders, products, [counts]] = await Promise.all([
+  const [orders, products, summary, [counts]] = await Promise.all([
     getOrders({ view, source: source || undefined, q: q || undefined }),
     getProducts(),
+    view === "packa" || view === "skickade" ? getOrderSummary(view) : Promise.resolve(null),
     sql<{ hantera: number; packa: number; skickade: number; faktura: number; alla: number }[]>`
       select
         count(*) filter (where status in ('ny','bekraftad','ska_packas'))::int as hantera,
@@ -127,34 +129,41 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
         </form>
       </div>
 
-      {view === "packa" ? (
-        <PostnordBatch rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
-      ) : null}
+      <div className={cn(summary && "grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_260px]")}>
+        <div className="min-w-0">
+          {view === "packa" ? (
+            <PostnordBatch rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
+          ) : null}
 
-      {orders.length === 0 ? (
-        <EmptyState title={q ? `Inga ordrar matchar ”${q}”` : "Inget här just nu"}>
-          {q ? (
-            "Prova ett annat sökord eller vyn Alla."
+          {orders.length === 0 ? (
+            <EmptyState title={q ? `Inga ordrar matchar ”${q}”` : "Inget här just nu"}>
+              {q ? (
+                "Prova ett annat sökord eller vyn Alla."
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  Tryck <Plus className="size-3.5" /> Ny order eller N för att lägga in en order.
+                </span>
+              )}
+            </EmptyState>
           ) : (
-            <span className="inline-flex items-center gap-1">
-              Tryck <Plus className="size-3.5" /> Ny order eller N för att lägga in en order.
-            </span>
+            <BulkProvider
+              items={orders.map((o) => ({ id: o.id, orderNumber: o.order_number, status: o.status, qty: o.total_qty }))}
+            >
+              <BulkBar />
+              <OrderTable
+                orders={orders}
+                lines={lines}
+                products={products}
+                quickAction={view === "hantera" || view === "packa" || view === "skickade"}
+                selectable={view === "hantera" || view === "packa" || view === "alla"}
+              />
+            </BulkProvider>
           )}
-        </EmptyState>
-      ) : (
-        <BulkProvider
-          items={orders.map((o) => ({ id: o.id, orderNumber: o.order_number, status: o.status, qty: o.total_qty }))}
-        >
-          <BulkBar />
-          <OrderTable
-            orders={orders}
-            lines={lines}
-            products={products}
-            quickAction={view === "hantera" || view === "packa" || view === "skickade"}
-            selectable={view === "hantera" || view === "packa" || view === "alla"}
-          />
-        </BulkProvider>
-      )}
+        </div>
+        {summary && (view === "packa" || view === "skickade") ? (
+          <OrderSummary summary={summary} view={view} />
+        ) : null}
+      </div>
     </>
   );
 }

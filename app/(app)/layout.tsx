@@ -52,7 +52,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <Sidebar userName={user.name} counts={{ hantera: openCount, uppfoljning: followUpCount }} devMode={isDevAuth()} />
           </div>
           <main className="min-w-0 flex-1">
-            <div className="mx-auto w-full max-w-[1120px] px-4 py-6 sm:px-8 sm:py-8">{children}</div>
+            <div className="mx-auto w-full max-w-[1120px] has-[[data-order-summary]]:max-w-[1440px] px-4 py-6 sm:px-8 sm:py-8">{children}</div>
           </main>
         </div>
       </OrderPanelProvider>
