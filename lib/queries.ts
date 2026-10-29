@@ -53,6 +53,43 @@ export type OrderFilter = {
   customerId?: string;
 };
 
+export type OrderSummary = {
+  order_count: number;
+  total_qty: number;
+  skane: number;
+  goteborg: number;
+  stockholm: number;
+  single_count: number;
+  multiple_count: number;
+};
+
+/** Hela vyn, oberoende av kanal, sökning och orderlistans sidgräns. */
+export async function getOrderSummary(view: "packa" | "skickade") {
+  const statuses = view === "packa" ? ["bekraftad", "ska_packas"] : ["skickad", "levererad"];
+  const [summary] = await sql<OrderSummary[]>`
+    with per_order as (
+      select o.id,
+        coalesce(sum(ol.quantity), 0) as qty,
+        coalesce(sum(ol.quantity) filter (where p.region = 'Skåne'), 0) as skane,
+        coalesce(sum(ol.quantity) filter (where p.region = 'Göteborg'), 0) as goteborg,
+        coalesce(sum(ol.quantity) filter (where p.region = 'Stockholm'), 0) as stockholm
+      from orders o
+      left join order_lines ol on ol.order_id = o.id
+      left join products p on p.id = ol.product_id
+      where o.status in ${sql(statuses)}
+      group by o.id
+    )
+    select count(*)::int as order_count,
+      coalesce(sum(qty), 0)::int as total_qty,
+      coalesce(sum(skane), 0)::int as skane,
+      coalesce(sum(goteborg), 0)::int as goteborg,
+      coalesce(sum(stockholm), 0)::int as stockholm,
+      count(*) filter (where qty = 1)::int as single_count,
+      count(*) filter (where qty >= 2)::int as multiple_count
+    from per_order`;
+  return summary;
+}
+
 export async function getOrders(f: OrderFilter = {}) {
   const view = f.view ?? "hantera";
   const q = f.q?.trim();
