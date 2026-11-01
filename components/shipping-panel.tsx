@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Printer, Send, Truck } from "lucide-react";
+import { Check, Pencil, Printer, Send, Truck, X } from "lucide-react";
 import { Button, Input, buttonClass } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { bookWithPostnord, sendTrackingToShopify } from "@/lib/actions/shipping";
+import { bookWithPostnord, sendTrackingToShopify, updateOrderWeight } from "@/lib/actions/shipping";
 import { SHIPPING_SERVICE } from "@/lib/labels";
 import type { OrderStatus } from "@/lib/types";
 
@@ -37,7 +37,23 @@ export function ShippingPanel({
   const [pending, start] = useTransition();
   const [tracking, setTracking] = useState(trackingNumber ?? "");
   const [manual, setManual] = useState(false);
+  const [editingWeight, setEditingWeight] = useState(false);
+  const [weight, setWeight] = useState(weightGrams ? String(weightGrams) : "");
   const locked = status === "makulerad";
+  const canEditWeight = !locked && !booked;
+
+  const saveWeight = (e: React.FormEvent) => {
+    e.preventDefault();
+    start(async () => {
+      const res = await updateOrderWeight(orderId, weight);
+      if (!res.ok) toast({ kind: "error", text: res.error });
+      else {
+        toast({ kind: "ok", text: res.message ?? "Sparat" });
+        setEditingWeight(false);
+        router.refresh();
+      }
+    });
+  };
   const done = Boolean(trackingNumber) && (!isShopify || shopifyFulfilled);
   const canShip = !locked && ["ny", "bekraftad", "ska_packas"].includes(status);
 
@@ -67,7 +83,57 @@ export function ShippingPanel({
         <span className="text-muted">Frakt</span>
         <span className="min-w-0 text-ink">
           {SHIPPING_SERVICE.name}
-          <span className="block text-[12px] text-muted">{weightGrams ? `${weightGrams} g` : "Vikt saknas"}</span>
+          {editingWeight ? (
+            <form onSubmit={saveWeight} className="mt-1 flex items-center gap-2">
+              <Input
+                id={`weight-${orderId}`}
+                aria-label="Vikt i gram"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={3000}
+                step={1}
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="gram"
+                autoFocus
+                className="w-24"
+              />
+              <span className="text-[12px] text-muted">g</span>
+              <Button type="submit" variant="secondary" disabled={pending} aria-label="Spara vikt">
+                <Check className="size-3.5" />
+                {pending ? "Sparar…" : "Spara"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={pending}
+                aria-label="Avbryt"
+                onClick={() => {
+                  setWeight(weightGrams ? String(weightGrams) : "");
+                  setEditingWeight(false);
+                }}
+              >
+                <X className="size-3.5" />
+              </Button>
+            </form>
+          ) : (
+            <span className="flex items-center gap-2 text-[12px] text-muted">
+              {weightGrams ? `${weightGrams} g` : "Vikt saknas"}
+              {canEditWeight ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 underline-offset-2 hover:text-ink hover:underline"
+                  onClick={() => {
+                    setWeight(weightGrams ? String(weightGrams) : "");
+                    setEditingWeight(true);
+                  }}
+                >
+                  <Pencil className="size-3" /> Ändra vikt
+                </button>
+              ) : null}
+            </span>
+          )}
         </span>
       </div>
 

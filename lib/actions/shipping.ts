@@ -95,6 +95,43 @@ export async function sendTrackingToShopify(orderId: string, rawTracking: string
   }
 }
 
+const MAX_WEIGHT_GRAMS = 3000; // Home Small tar högst 3 kg
+
+/** Ändra orderns vikt för hand (gram). Tomt värde = ingen vikt, då används standardvikten vid bokning. */
+export async function updateOrderWeight(orderId: string, rawGrams: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const id = z.string().uuid().parse(orderId);
+    const text = rawGrams.trim().replace(",", ".");
+
+    let grams: number | null = null;
+    if (text !== "") {
+      const n = Number(text);
+      if (!Number.isInteger(n)) throw new Error("Ange vikten i hela gram, t.ex. 300");
+      if (n < 1) throw new Error("Vikten måste vara minst 1 gram");
+      if (n > MAX_WEIGHT_GRAMS) throw new Error(`Vikten får vara högst ${MAX_WEIGHT_GRAMS} g för Home Small`);
+      grams = n;
+    }
+
+    const [o] = await sql<{ status: OrderStatus; weight_grams: number | null; postnord_booked_at: Date | null }[]>`
+      select status, weight_grams, postnord_booked_at from orders where id = ${id}`;
+    if (!o) throw new Error("Ordern finns inte");
+    if (o.status === "makulerad") throw new Error("Ordern är makulerad");
+    if (o.postnord_booked_at) throw new Error("Ordern är redan bokad hos PostNord, så vikten kan inte ändras här");
+
+    await sql`update orders set weight_grams = ${grams} where id = ${id}`;
+    await sql`insert into order_events (order_id, kind, note, created_by)
+              values (${id}, 'andrad',
+                      ${`Vikt ändrad: ${o.weight_grams ? `${o.weight_grams} g` : "saknades"} → ${grams ? `${grams} g` : "ingen vikt"}`},
+                      ${user.id})`;
+
+    revalidatePath("/", "layout");
+    return { ok: true, message: grams ? `Vikt sparad: ${grams} g` : "Vikten rensad" };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export type BookResult = {
   ok: boolean;
   booked: { orderNumber: number; trackingNumber: string }[];
