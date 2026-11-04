@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { fulfillWithTracking } from "@/lib/shopify-admin";
 import { bookShipment } from "@/lib/postnord";
 import { orderRef } from "@/lib/labels";
+import { shippingDetailsSchema, type ShippingDetails } from "@/lib/shipping-details";
 import type { ActionResult, OrderStatus } from "@/lib/types";
 
 // PostNords kolli-ID är bokstäver och siffror, t.ex. 00370712345678901234 eller UA123456789SE
@@ -144,7 +145,10 @@ export type BookResult = {
  * ligger kvar under Att packa; den markeras som skickad separat när paketet har lämnats.
  * Etiketterna skrivs sedan ut via /api/etiketter.
  */
-export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> {
+export async function bookWithPostnord(
+  orderIds: string[],
+  details: Record<string, ShippingDetails> = {},
+): Promise<BookResult> {
   const user = await requireUser();
   const ids = z.array(z.string().uuid()).min(1, "Välj minst en order").max(50).parse(orderIds);
   const rows = await sql<ShipRow[]>`select ${SHIP_COLUMNS} from orders where id in ${sql(ids)} order by order_number`;
@@ -156,7 +160,12 @@ export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> 
       if (o.postnord_booked_at && o.tracking_number) throw new Error("Redan bokad");
       if (!["ny", "bekraftad", "ska_packas"].includes(o.status)) throw new Error("Ordern är redan skickad");
 
+      // Validera på servern innan någon bokning görs. Tom kontaktuppgift rensar bara bokningens värde.
+      const custom = Object.prototype.hasOwnProperty.call(details, o.id)
+        ? shippingDetailsSchema.parse(details[o.id])
+        : null;
       const booking = await bookShipment({
+        ...(custom ? { reference: custom.reference } : {}),
         orderRef: orderRef(o.order_number),
         shopifyName: o.shopify_order_name,
         name: o.ship_name ?? o.contact_name ?? "",
@@ -164,8 +173,8 @@ export async function bookWithPostnord(orderIds: string[]): Promise<BookResult> 
         postalCode: o.ship_postal_code ?? "",
         city: o.ship_city ?? "",
         country: o.ship_country || "SE",
-        email: o.contact_email,
-        phone: o.contact_phone,
+        email: custom ? custom.email || null : o.contact_email,
+        phone: custom ? custom.phone || null : o.contact_phone,
         weightGrams: o.weight_grams,
       });
 

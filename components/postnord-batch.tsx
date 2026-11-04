@@ -6,9 +6,11 @@ import { Printer, Truck } from "lucide-react";
 import { Button, buttonClass, cn } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { bookWithPostnord, type BookResult } from "@/lib/actions/shipping";
+import { ShippingFields } from "@/components/shipping-fields";
+import { shippingDetailsSchema, type ShippingDetails } from "@/lib/shipping-details";
 import { orderRef } from "@/lib/labels";
 
-type Row = { id: string; orderNumber: number; name: string; city: string | null; qty: number; ready: boolean };
+type Row = { id: string; orderNumber: number; name: string; city: string | null; qty: number; ready: boolean; shippingDetails: ShippingDetails };
 
 /** "Att packa": boka flera ordrar hos PostNord på en gång och skriv ut etiketterna */
 export function PostnordBatch({
@@ -27,6 +29,7 @@ export function PostnordBatch({
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const readyIds = rows.filter((r) => r.ready).map((r) => r.id);
   const allSelected = readyIds.length > 0 && readyIds.every((id) => selected.has(id));
+  const [details, setDetails] = useState<Record<string, ShippingDetails>>({});
   const [result, setResult] = useState<BookResult | null>(null);
 
   const toggle = (id: string) =>
@@ -39,7 +42,16 @@ export function PostnordBatch({
 
   const book = () =>
     start(async () => {
-      const res = await bookWithPostnord([...selected]);
+      const bookingDetails: Record<string, ShippingDetails> = {};
+      for (const row of rows.filter((r) => selected.has(r.id))) {
+        const parsed = shippingDetailsSchema.safeParse(details[row.id] ?? row.shippingDetails);
+        if (!parsed.success) {
+          toast({ kind: "error", text: `${orderRef(row.orderNumber)}: ${parsed.error.issues[0].message}` });
+          return;
+        }
+        bookingDetails[row.id] = parsed.data;
+      }
+      const res = await bookWithPostnord([...selected], bookingDetails);
       setResult(res);
       setSelected(new Set());
       if (res.booked.length) toast({ kind: "ok", text: `${res.booked.length} bokade hos PostNord` });
@@ -123,6 +135,12 @@ export function PostnordBatch({
                 </span>
                 <span className="tabular text-muted">{r.ready ? `${r.qty} st` : "Adress saknas"}</span>
               </label>
+              {selected.has(r.id) ? (
+                <div className="pb-4 pl-7">
+                  <ShippingFields id={`batch-shipping-${r.id}`} value={details[r.id] ?? r.shippingDetails}
+                    onChange={(value) => setDetails((prev) => ({ ...prev, [r.id]: value }))} disabled={pending} />
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

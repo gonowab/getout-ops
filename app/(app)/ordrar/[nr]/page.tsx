@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { EditionTag, cn } from "@/components/ui";
 import { InvoiceBadge, StatusBadge } from "@/components/badges";
 import { CommentBox, EditOrderButton, InvoicePanel, StatusControl } from "@/components/order-actions";
+import { defaultShippingDetails } from "@/lib/shipping-details";
 import { ShippingPanel } from "@/components/shipping-panel";
 import { postnordBookingStatus } from "@/lib/postnord";
 import { getOrderByNumber, getProducts } from "@/lib/queries";
@@ -186,6 +187,7 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
             <ShippingPanel
               orderId={o.id}
               orderNumber={o.order_number}
+              shippingDetails={defaultShippingDetails(o.order_number, o.shopify_order_name, o.contact_email, o.contact_phone)}
               status={o.status}
               weightGrams={o.weight_grams}
               trackingNumber={o.tracking_number}

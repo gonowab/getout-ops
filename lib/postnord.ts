@@ -64,6 +64,7 @@ const clean = (v: string | null | undefined) => (v ?? "").trim();
 
 export type BookingOrder = {
   orderRef: string; // GO-1016
+  reference?: string; // Anpassad fraktreferens, högst 35 tecken
   shopifyName: string | null; // #1197
   name: string;
   address: string;
@@ -82,7 +83,7 @@ function bookingBody(o: BookingOrder, test: boolean) {
   const kg = Math.max(0.01, o.weightGrams ? o.weightGrams / 1000 : DEFAULT_KG);
   const weight = { value: Math.round(kg * 1000) / 1000, unit: "KGM" };
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  const reference = [o.orderRef, o.shopifyName].filter(Boolean).join(" ");
+  const reference = o.reference ?? [o.orderRef, o.shopifyName].filter(Boolean).join(" ");
 
   return {
     messageDate: now,

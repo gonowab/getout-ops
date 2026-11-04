@@ -1,3 +1,4 @@
+import { defaultShippingDetails } from "@/lib/shipping-details";
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { EmptyState, Input, PageHeader, cn } from "@/components/ui";
@@ -60,6 +61,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
           .map((o) => ({
             id: o.id,
             orderNumber: o.order_number,
+            shippingDetails: defaultShippingDetails(o.order_number, o.shopify_order_name, o.contact_email, o.contact_phone),
             name: o.ship_name ?? o.contact_name ?? o.customer_name ?? "–",
             city: o.ship_city,
             qty: o.total_qty,

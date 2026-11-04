@@ -6,6 +6,8 @@ import { Check, Pencil, Printer, Send, Truck, X } from "lucide-react";
 import { Button, Input, buttonClass } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { bookWithPostnord, sendTrackingToShopify, updateOrderWeight } from "@/lib/actions/shipping";
+import { ShippingFields } from "@/components/shipping-fields";
+import { shippingDetailsSchema, type ShippingDetails } from "@/lib/shipping-details";
 import { SHIPPING_SERVICE } from "@/lib/labels";
 import type { OrderStatus } from "@/lib/types";
 
@@ -13,6 +15,7 @@ import type { OrderStatus } from "@/lib/types";
 export function ShippingPanel({
   orderId,
   orderNumber,
+  shippingDetails,
   status,
   weightGrams,
   trackingNumber,
@@ -23,6 +26,7 @@ export function ShippingPanel({
 }: {
   orderId: string;
   orderNumber: number;
+  shippingDetails: ShippingDetails;
   status: OrderStatus;
   weightGrams: number | null;
   trackingNumber: string | null;
@@ -36,6 +40,7 @@ export function ShippingPanel({
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [tracking, setTracking] = useState(trackingNumber ?? "");
+  const [details, setDetails] = useState(shippingDetails);
   const [manual, setManual] = useState(false);
   const [editingWeight, setEditingWeight] = useState(false);
   const [weight, setWeight] = useState(weightGrams ? String(weightGrams) : "");
@@ -59,7 +64,12 @@ export function ShippingPanel({
 
   const book = () =>
     start(async () => {
-      const res = await bookWithPostnord([orderId]);
+      const parsed = shippingDetailsSchema.safeParse(details);
+      if (!parsed.success) {
+        toast({ kind: "error", text: parsed.error.issues[0].message });
+        return;
+      }
+      const res = await bookWithPostnord([orderId], { [orderId]: parsed.data });
       if (res.failed.length) toast({ kind: "error", text: res.failed[0].error });
       else toast({ kind: "ok", text: `Bokad hos PostNord: ${res.booked[0]?.trackingNumber}` });
       router.refresh();
@@ -169,6 +179,7 @@ export function ShippingPanel({
 
       {!done && canShip && !trackingNumber ? (
         <div className="flex flex-col gap-1.5">
+          <ShippingFields id={`shipping-${orderId}`} value={details} onChange={setDetails} disabled={pending} />
           <Button variant="primary" className="w-fit" disabled={pending || Boolean(bookingBlocked)} onClick={book}>
             <Truck className="size-3.5" />
             {pending ? "Bokar…" : "Boka hos PostNord"}
