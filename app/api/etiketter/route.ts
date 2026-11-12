@@ -13,8 +13,7 @@ export async function GET(req: Request) {
   const numbers = (new URL(req.url).searchParams.get("ordrar") ?? "")
     .split(",")
     .map((n) => parseInt(n.replace(/\D/g, ""), 10))
-    .filter((n) => Number.isInteger(n) && n > 0)
-    .slice(0, 100);
+    .filter((n) => Number.isInteger(n) && n > 0);
   if (numbers.length === 0) return new NextResponse("Inga ordrar valda", { status: 400 });
 
   const rows = await sql<{ id: string; order_number: number; tracking_number: string }[]>`

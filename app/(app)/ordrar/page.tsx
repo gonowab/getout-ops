@@ -34,10 +34,11 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
   const viewParam = typeof sp.vy === "string" ? sp.vy : "hantera";
   const view = (VIEWS.find((v) => v.value === viewParam)?.value ?? "hantera") as OrderFilter["view"];
   const source = typeof sp.kanal === "string" ? sp.kanal : "";
+  const group = typeof sp.grupp === "string" ? sp.grupp : "";
   const q = typeof sp.q === "string" ? sp.q : "";
 
-  const [orders, products, summary, [counts]] = await Promise.all([
-    getOrders({ view, source: source || undefined, q: q || undefined }),
+  const [allOrders, products, summary, [counts]] = await Promise.all([
+    getOrders({ view, source: source || undefined, q: q || undefined, all: true }),
     getProducts(),
     view === "packa" || view === "skickade" ? getOrderSummary(view) : Promise.resolve(null),
     sql<{ hantera: number; packa: number; skickade: number; faktura: number; alla: number }[]>`
@@ -50,7 +51,29 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
         count(*)::int as alla
       from orders_overview`,
   ]);
-  const lines = await getOrderLinesFor(orders.map((o) => o.id));
+  const lines = await getOrderLinesFor(allOrders.map((o) => o.id));
+  const byProduct = new Map(products.map((p) => [p.id, p]));
+  const groups = new Map<string, { label: string; count: number }>();
+  const orderGroups = new Map<string, string>();
+  for (const order of allOrders) {
+    const quantities = new Map<number, number>();
+    for (const line of lines.get(order.id) ?? []) {
+      quantities.set(line.product_id, (quantities.get(line.product_id) ?? 0) + Number(line.quantity));
+    }
+    const contents = [...quantities].filter(([, qty]) => qty > 0).sort(([a], [b]) => a - b);
+    const key = contents.map(([id, qty]) => `${id}:${qty}`).join(",") || "tom";
+    const label = contents.map(([id, qty]) => {
+      const product = byProduct.get(id);
+      return `${qty} ${product ? (product.edition === null ? product.name : product.region) : "Okänd artikel"}${product?.edition === "gammal" ? " (gammal ask)" : ""}`;
+    }).join(" + ") || "Utan artiklar";
+    orderGroups.set(order.id, key);
+    groups.set(key, { label, count: (groups.get(key)?.count ?? 0) + 1 });
+  }
+  const filterGroups: [string, { label: string; count: number }][] = [
+    ["", { label: "Alla innehåll", count: allOrders.length }],
+    ...[...groups].sort((a, b) => a[1].label.localeCompare(b[1].label, "sv", { numeric: true })),
+  ];
+  const orders = group ? allOrders.filter((o) => orderGroups.get(o.id) === group) : allOrders;
 
   // Att packa: ordrar som kan bokas hos PostNord, och dagens bokningar (för utskrift av etiketter)
   const toBook =
@@ -73,7 +96,8 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
       ? (
           await sql<{ order_number: number }[]>`
             select order_number from orders
-            where postnord_booked_at >= (date_trunc('day', now() at time zone 'Europe/Stockholm') at time zone 'Europe/Stockholm')
+            where id in ${sql(orders.length ? orders.map((o) => o.id) : ["00000000-0000-0000-0000-000000000000"])}
+              and postnord_booked_at >= (date_trunc('day', now() at time zone 'Europe/Stockholm') at time zone 'Europe/Stockholm')
             order by order_number`
         ).map((r) => r.order_number)
       : [];
@@ -81,7 +105,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
 
   const href = (patch: Record<string, string>) => {
     const p = new URLSearchParams();
-    const next = { vy: view ?? "hantera", kanal: source, q, ...patch };
+    const next = { vy: view ?? "hantera", kanal: source, q, grupp: group, ...patch };
     for (const [k, v] of Object.entries(next)) if (v && !(k === "vy" && v === "hantera")) p.set(k, v);
     const s = p.toString();
     return s ? `/ordrar?${s}` : "/ordrar";
@@ -126,15 +150,29 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
         <form className="relative w-full sm:w-72">
           {view !== "hantera" ? <input type="hidden" name="vy" value={view} /> : null}
           {source ? <input type="hidden" name="kanal" value={source} /> : null}
+          {group ? <input type="hidden" name="grupp" value={group} /> : null}
           <Search className="pointer-events-none absolute left-2.5 top-2 size-4 text-subtle" />
           <Input name="q" defaultValue={q} placeholder="Sök kund, ordernummer, faktura" className="pl-8" />
         </form>
       </div>
 
-      <div className={cn(summary && "grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_260px]")}>
+      <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="rounded-xl border border-line bg-surface p-3">
+          <h2 className="text-[14px] font-semibold">Orderinnehåll</h2>
+          <p className="mb-3 mt-1 text-[12px] text-muted">Grupper med exakt samma artiklar och antal.</p>
+          <nav aria-label="Filtrera efter orderinnehåll" className="flex max-h-[65vh] flex-col gap-1 overflow-y-auto text-[13px]">
+            {filterGroups.map(([value, entry]) => {
+              return <Link key={value} href={href({ grupp: value })} aria-current={group === value ? "page" : undefined}
+                className={cn("flex items-start justify-between gap-2 rounded-md px-2 py-2", group === value ? "bg-hover font-medium text-ink" : "text-muted hover:bg-canvas hover:text-ink")}>
+                <span>{entry.label}</span><span className="tabular text-subtle">{entry.count}</span>
+              </Link>;
+            })}
+          </nav>
+        </aside>
+        <div className={cn("min-w-0", summary && "grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_260px]")}>
         <div className="min-w-0">
           {view === "packa" ? (
-            <PostnordBatch rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
+            <PostnordBatch key={`${source}:${q}:${group}`} rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
           ) : null}
 
           {orders.length === 0 ? (
@@ -149,7 +187,8 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
             </EmptyState>
           ) : (
             <BulkProvider
-              items={orders.map((o) => ({ id: o.id, orderNumber: o.order_number, status: o.status, qty: o.total_qty }))}
+              key={`${view}:${source}:${q}:${group}`}
+              items={orders.map((o) => ({ id: o.id, orderNumber: o.order_number, status: o.status, qty: o.total_qty, labelReady: Boolean(o.postnord_booked_at && o.tracking_number) }))}
             >
               <BulkBar />
               <OrderTable
@@ -165,6 +204,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
         {summary && (view === "packa" || view === "skickade") ? (
           <OrderSummary summary={summary} view={view} />
         ) : null}
+        </div>
       </div>
     </>
   );

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Button, cn } from "@/components/ui";
+import { Button, buttonClass, cn } from "@/components/ui";
 import { Modal } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { markOrdersShipped } from "@/lib/actions/orders";
@@ -10,7 +10,7 @@ import { orderRef, SHIPPED_STATUSES } from "@/lib/labels";
 import { num } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types";
 
-export type BulkItem = { id: string; orderNumber: number; status: OrderStatus; qty: number };
+export type BulkItem = { id: string; orderNumber: number; status: OrderStatus; qty: number; labelReady?: boolean };
 
 type Ctx = {
   items: Map<string, BulkItem>;
@@ -107,6 +107,7 @@ export function BulkBar() {
   if (selected.size === 0) return null;
 
   const chosen = [...selected].map((id) => items.get(id)!).filter(Boolean);
+  const printable = chosen.filter((i) => i.labelReady);
   const totalQty = chosen.reduce((sum, i) => sum + i.qty, 0);
 
   const run = () =>
@@ -131,6 +132,12 @@ export function BulkBar() {
           {selected.size} {selected.size === 1 ? "order vald" : "ordrar valda"}
         </span>
         <div className="flex items-center gap-2">
+          {printable.length > 0 ? (
+            <a href={`/api/etiketter?ordrar=${printable.map((i) => i.orderNumber).join(",")}`} target="_blank" rel="noreferrer" className={buttonClass("secondary", "sm")}>
+              Skriv ut etiketter ({printable.length})
+            </a>
+          ) : null}
+          {chosen.length > printable.length ? <span className="text-[12px] text-muted">{chosen.length - printable.length} saknar bokad frakt</span> : null}
           <Button variant="ghost" size="sm" onClick={clear} disabled={pending}>
             Avmarkera
           </Button>

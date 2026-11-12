@@ -47,6 +47,7 @@ export async function getDashboardCounts() {
 }
 
 export type OrderFilter = {
+  all?: boolean;
   view?: "hantera" | "packa" | "skickade" | "faktura" | "alla";
   source?: string;
   q?: string;
@@ -126,7 +127,7 @@ export async function getOrders(f: OrderFilter = {}) {
       }
     order by
       ${view === "packa" ? sql`order_date asc, order_number asc` : sql`order_date desc, order_number desc`}
-    limit 500`;
+    ${f.all ? sql`` : sql`limit 500`}`;
 }
 
 export async function getOrderLinesFor(orderIds: string[]) {
