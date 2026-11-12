@@ -276,7 +276,9 @@ export async function updateInvoice(orderId: string, formData: FormData): Promis
       paidAt: formData.get("paidAt"),
     });
 
-    if (input.invoiceStatus === "fakturerad" && !input.invoiceDueDate)
+    const [invoiceOrder] = await sql<{ source: string; customer_type: string | null }[]>`select source,customer_type from orders_overview where id=${orderId}`;
+    if (!invoiceOrder) return {ok:false,error:"Ordern finns inte."};
+    if (input.invoiceStatus === "fakturerad" && !input.invoiceDueDate && invoiceOrder.source !== "aterforsaljare" && invoiceOrder.customer_type !== "aterforsaljare")
       return { ok: false, error: "Ange förfallodatum, annars kan systemet inte se när fakturan förfaller." };
 
     const file = formData.get("pdf");

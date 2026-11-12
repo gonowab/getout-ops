@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Search } from "lucide-react";
 import { EmptyState, Input, PageHeader, cn } from "@/components/ui";
 import { CustomerFormButton } from "@/components/customer-form";
@@ -12,7 +13,6 @@ export const metadata = { title: "Kunder" };
 const TABS: { value: CustomerType | ""; label: string }[] = [
   { value: "", label: "Alla" },
   { value: "foretag", label: "Företag" },
-  { value: "aterforsaljare", label: "Återförsäljare" },
   { value: "privat", label: "Privatpersoner" },
 ];
 
@@ -20,6 +20,7 @@ export default async function KunderPage(props: PageProps<"/kunder">) {
   const sp = await props.searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const typ = typeof sp.typ === "string" ? sp.typ : "";
+  if (typ === "aterforsaljare") redirect("/aterforsaljare");
   const all = await getCustomers(q);
   const customers = typ ? all.filter((c) => c.type === typ) : all;
 
