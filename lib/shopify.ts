@@ -213,7 +213,7 @@ async function updateExisting(
 }
 
 async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: string): Promise<ProcessResult> {
-  // Produktkoppling: Shopify-variant → kortlek (gammal eller ny ask, styrs under Inställningar)
+  // Produktkoppling: Shopify-variant → artikel (gammal eller ny ask, styrs under Inställningar)
   const mapped = await tx<{ id: number; shopify_variant_id: string }[]>`
     select id, shopify_variant_id from products where shopify_variant_id is not null and active
     union all
@@ -241,7 +241,7 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
   if (lines.size === 0) {
     return {
       outcome: "ignorerad",
-      message: unknown.length ? `Inga kortlekar i ordern (${unknown.join(", ")})` : "Ordern saknar produkter",
+      message: unknown.length ? `Inga kopplade artiklar i ordern (${unknown.join(", ")})` : "Ordern saknar produkter",
     };
   }
 
@@ -288,7 +288,7 @@ async function createNew(tx: Sql, order: ShopifyOrder, shopifyId: string, name: 
   }
 
   const invoiceStatus = invoiceFromShopify(order);
-  const comment = [clean(order.note), unknown.length ? `Ej kortlekar i ordern: ${unknown.join(", ")}` : null]
+  const comment = [clean(order.note), unknown.length ? `Ej kopplade artiklar i ordern: ${unknown.join(", ")}` : null]
     .filter(Boolean)
     .join("\n") || null;
 

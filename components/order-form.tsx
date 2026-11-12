@@ -111,6 +111,7 @@ export function OrderForm({ open, onOpenChange, products, stock, customers, edit
   const [source, setSource] = useState<OrderSource>(init.source);
   const [qty, setQty] = useState<Record<number, string>>(init.qty);
   const [unitPrice, setUnitPrice] = useState(init.unitPrice);
+  const [priceChanged, setPriceChanged] = useState(false);
   const [f, setF] = useState(init.fields);
   const [confirmNow, setConfirmNow] = useState(false);
   const [saveToCustomer, setSaveToCustomer] = useState(!edit);
@@ -137,7 +138,7 @@ export function OrderForm({ open, onOpenChange, products, stock, customers, edit
 
   const regions = useMemo(() => {
     const order: string[] = [];
-    for (const p of products) if (!order.includes(p.region)) order.push(p.region);
+    for (const p of products) if (p.edition !== null && !order.includes(p.region)) order.push(p.region);
     return order.map((r) => ({
       region: r,
       gammal: products.find((p) => p.region === r && p.edition === "gammal"),
@@ -156,7 +157,17 @@ export function OrderForm({ open, onOpenChange, products, stock, customers, edit
 
   const total = products.reduce((s, p) => s + (parseInt(qty[p.id] || "0", 10) || 0), 0);
   const price = parseFloat(unitPrice.replace(",", "."));
-  const value = !isNaN(price) && total > 0 ? price * total : null;
+  function priceForProduct(productId: number) {
+    if (edit && !priceChanged) {
+      const original = edit.lines.find((l) => l.product_id === productId)?.unit_price;
+      return original == null ? null : Number(original);
+    }
+    return isNaN(price) ? null : price;
+  }
+  const hasPrice = products.some((p) => Number(qty[p.id] || 0) > 0 && priceForProduct(p.id) !== null);
+  const value = hasPrice && total > 0
+    ? products.reduce((sum, p) => sum + Number(qty[p.id] || 0) * (priceForProduct(p.id) ?? 0), 0)
+    : null;
 
   function submit() {
     setError(null);
@@ -183,7 +194,7 @@ export function OrderForm({ open, onOpenChange, products, stock, customers, edit
         lines: products.map((p) => ({
           productId: p.id,
           quantity: parseInt(qty[p.id] || "0", 10) || 0,
-          unitPrice: isNaN(price) ? null : price,
+          unitPrice: priceForProduct(p.id),
         })),
       });
       if (!res.ok) {
@@ -216,7 +227,7 @@ export function OrderForm({ open, onOpenChange, products, stock, customers, edit
                 {value !== null ? <> totalt {num(Math.round(value))} kr ex moms</> : null}
               </>
             ) : (
-              "Inga kortlekar valda"
+              "Inga artiklar valda"
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -343,13 +354,26 @@ export function OrderForm({ open, onOpenChange, products, stock, customers, edit
               </div>
             ))}
           </div>
+          {products.some((p) => p.edition === null) ? (
+            <div className="overflow-hidden rounded-lg border border-line">
+              <h3 className="bg-canvas px-3 py-2 text-[12px] font-medium text-muted">Tillbehör</h3>
+              {products.filter((p) => p.edition === null).map((p) => (
+                <div key={p.id} className="grid grid-cols-2 items-center border-t border-line">
+                  <div className="px-3 py-2.5 font-medium">{p.name}</div>
+                  <QtyCell value={qty[p.id] ?? ""}
+                    onChange={(v) => setQty((prev) => ({ ...prev, [p.id]: v }))}
+                    available={available(p.id)} disabled={locked} label={p.name} autoFocus={false} />
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Pris per kortlek (valfritt)" hint="Kronor ex moms">
+            <Field label="Pris per artikel (valfritt)" hint={edit ? "Radpriser behålls tills du ändrar fältet. Nytt pris gäller alla artiklar, ex moms." : "Gäller alla artiklar, kronor ex moms"}>
               <Input
                 inputMode="decimal"
                 placeholder="t.ex. 223"
                 value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
+                onChange={(e) => { setUnitPrice(e.target.value); setPriceChanged(true); }}
               />
             </Field>
             <Field label="Orderdatum">

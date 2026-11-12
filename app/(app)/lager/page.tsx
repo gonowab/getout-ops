@@ -73,7 +73,7 @@ export default async function LagerPage(props: PageProps<"/lager">) {
               href={qs({ produkt: undefined })}
               className={cn("rounded-md px-2 py-1", !productId ? "bg-hover font-medium text-ink" : "text-muted hover:text-ink")}
             >
-              Alla kortlekar
+              Alla artiklar
             </Link>
             {products.map((p) => (
               <Link
@@ -98,7 +98,7 @@ export default async function LagerPage(props: PageProps<"/lager">) {
               <thead className="bg-canvas text-left text-[12px] text-muted">
                 <tr>
                   <th className="px-4 py-2 font-medium">Datum</th>
-                  <th className="px-4 py-2 font-medium">Kortlek</th>
+                  <th className="px-4 py-2 font-medium">Artikel</th>
                   <th className="px-4 py-2 text-right font-medium">Antal</th>
                   <th className="px-4 py-2 font-medium">Typ</th>
                   <th className="px-4 py-2 font-medium">Notering</th>

@@ -20,7 +20,7 @@ export function ProductChips({ lines, products }: { lines: OrderLine[]; products
             {p.edition === "gammal" ? (
               <span className="size-1.5 rounded-full bg-old" title="Gammal ask" aria-label="Gammal ask" />
             ) : null}
-            <span className="text-muted">{p.region}</span>
+            <span className="text-muted">{p.edition === null ? p.name : p.region}</span>
             <span className="tabular text-ink">{num(l.quantity)}</span>
           </span>
         );
@@ -57,7 +57,7 @@ export function OrderTable({
             ) : null}
             <th className="px-4 py-2 font-medium">Order</th>
             {!hideCustomer ? <th className="px-4 py-2 font-medium">Kund</th> : null}
-            <th className="px-4 py-2 font-medium">Kortlekar</th>
+            <th className="px-4 py-2 font-medium">Artiklar</th>
             <th className="px-4 py-2 text-right font-medium">Antal</th>
             <th className="px-4 py-2 font-medium">Status</th>
             <th className="px-4 py-2 font-medium">Faktura</th>

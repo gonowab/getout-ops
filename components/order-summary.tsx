@@ -27,6 +27,9 @@ export function OrderSummary({ summary, view }: { summary: Summary; view: "packa
           <dt>Totalt kortlekar</dt><dd className="tabular">{num(summary.total_qty)} st</dd>
         </div>
       </dl>
+      <dl className="mt-3 text-[13px]">
+        <div className="flex justify-between gap-3"><dt>Tillbehör</dt><dd className="tabular font-medium">{num(summary.accessories)} st</dd></div>
+      </dl>
       <div className="mt-5 border-t border-line pt-4">
         {view === "packa" ? (
           <>

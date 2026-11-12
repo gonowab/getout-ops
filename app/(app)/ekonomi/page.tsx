@@ -90,8 +90,8 @@ export default async function EkonomiPage(props: PageProps<"/ekonomi">) {
               {kr(t.value)}
             </div>
             <div className="mt-2 text-[13px] text-muted">
-              {num(t.orders)} ordrar, {num(t.qty)} kortlekar
-              {t.pricedQty > 0 && t.value > 0 ? `, snitt ${kr(t.value / t.pricedQty)} per kortlek` : ""}
+              {num(t.orders)} ordrar, {num(t.qty)} artiklar
+              {t.pricedQty > 0 && t.value > 0 ? `, snitt ${kr(t.value / t.pricedQty)} per artikel` : ""}
             </div>
           </div>
         </div>
@@ -175,7 +175,7 @@ export default async function EkonomiPage(props: PageProps<"/ekonomi">) {
                 <tr>
                   <th className="px-4 py-2 font-medium">Kanal</th>
                   <th className="px-4 py-2 text-right font-medium">Ordrar</th>
-                  <th className="px-4 py-2 text-right font-medium">Kortlekar</th>
+                  <th className="px-4 py-2 text-right font-medium">Artiklar</th>
                   <th className="px-4 py-2 text-right font-medium">Värde</th>
                   <th className="px-4 py-2 text-right font-medium">Andel</th>
                 </tr>
@@ -203,14 +203,14 @@ export default async function EkonomiPage(props: PageProps<"/ekonomi">) {
           </div>
         </section>
 
-        {/* Per kortlek */}
+        {/* Per artikel */}
         <section>
-          <h2 className="mb-3 text-[15px] font-semibold">Per kortlek</h2>
+          <h2 className="mb-3 text-[15px] font-semibold">Per artikel</h2>
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full whitespace-nowrap text-[13px]">
               <thead className="bg-canvas text-left text-[12px] text-muted">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Kortlek</th>
+                  <th className="px-4 py-2 font-medium">Artikel</th>
                   <th className="px-4 py-2 text-right font-medium">Sålda</th>
                   <th className="px-4 py-2 text-right font-medium">Värde</th>
                 </tr>

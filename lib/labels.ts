@@ -73,10 +73,12 @@ export const movementLabel: Record<MovementType, string> = {
 };
 
 export function editionLabel(edition: Product["edition"]) {
+  if (edition === null) return "Tillbehör";
   return edition === "gammal" ? "Gammal ask" : "Ny ask";
 }
 
 export function productLabel(p: Pick<Product, "region" | "edition">) {
+  if (p.edition === null) return p.region;
   return `${p.region} (${p.edition === "gammal" ? "gammal ask" : "ny ask"})`;
 }
 

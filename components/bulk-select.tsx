@@ -144,7 +144,7 @@ export function BulkBar() {
         open={confirm}
         onOpenChange={setConfirm}
         title={`Markera ${selected.size} ${selected.size === 1 ? "order" : "ordrar"} som skickade?`}
-        description={`${num(totalQty)} kortlekar dras från lagret.`}
+        description={`${num(totalQty)} artiklar dras från lagret.`}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirm(false)} disabled={pending}>

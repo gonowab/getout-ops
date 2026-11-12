@@ -26,8 +26,8 @@ const isShipped = (s: OrderStatus) => SHIPPED_STATUSES.includes(s);
 
 /** Beskriver vad ett statusbyte gör med lagret, eller null om inget händer */
 function stockEffect(from: OrderStatus, to: OrderStatus, qty: number) {
-  if (!isShipped(from) && isShipped(to)) return `${num(qty)} kortlekar dras från lagret.`;
-  if (isShipped(from) && !isShipped(to)) return `${num(qty)} kortlekar läggs tillbaka i lagret.`;
+  if (!isShipped(from) && isShipped(to)) return `${num(qty)} artiklar dras från lagret.`;
+  if (isShipped(from) && !isShipped(to)) return `${num(qty)} artiklar läggs tillbaka i lagret.`;
   return null;
 }
 

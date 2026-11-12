@@ -17,7 +17,7 @@ export type Product = {
   sku: string;
   name: string;
   region: string;
-  edition: Edition;
+  edition: Edition | null;
   sort_order: number;
   low_stock_threshold: number;
 };

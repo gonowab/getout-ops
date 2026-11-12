@@ -28,7 +28,7 @@ export async function setShopifyEdition(region: string, edition: "gammal" | "ny"
   }
 }
 
-/** Koppla en Shopify-produkt (variant-ID) till en kortlek, t.ex. när en ny produkt läggs upp */
+/** Koppla en Shopify-produkt (variant-ID) till en artikel, t.ex. när en ny produkt läggs upp */
 export async function addShopifyVariant(rawVariantId: string, productId: number): Promise<ActionResult> {
   try {
     await requireUser();

@@ -138,7 +138,8 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   );
 }
 
-export function EditionTag({ edition, className }: { edition: "gammal" | "ny"; className?: string }) {
+export function EditionTag({ edition, className }: { edition: "gammal" | "ny" | null; className?: string }) {
+  if (edition === null) return null;
   if (edition === "ny") return <span className={cn("shrink-0 whitespace-nowrap text-[12px] text-muted", className)}>Ny ask</span>;
   return (
     <span
