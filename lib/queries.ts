@@ -164,10 +164,11 @@ export async function getCustomers(q?: string) {
       select customer_id, count(*) as order_count, max(order_date) as last_order, sum(total_qty) as total_qty
       from orders_overview where status <> 'makulerad' group by customer_id
     ) o on o.customer_id = c.id
+    where c.type <> 'aterforsaljare'
     ${
       term
-        ? sql`where c.name ilike ${"%" + term + "%"} or c.contact_name ilike ${"%" + term + "%"}
-               or c.email ilike ${"%" + term + "%"} or c.city ilike ${"%" + term + "%"}`
+        ? sql`and (c.name ilike ${"%" + term + "%"} or c.contact_name ilike ${"%" + term + "%"}
+               or c.email ilike ${"%" + term + "%"} or c.city ilike ${"%" + term + "%"})`
         : sql``
     }
     order by lower(c.name)`;
@@ -258,3 +259,38 @@ export const ORDER_STATUSES: OrderStatus[] = [
   "avslutad",
   "makulerad",
 ];
+
+export async function getResellerRegister() {
+  const [resellers, notes, deliveries, orders, lines] = await Promise.all([
+    sql<
+      import("@/lib/types").Reseller[]
+    >`select * from customers where type='aterforsaljare' order by lower(name),id`,
+    sql<
+      import("@/lib/types").ResellerNote[]
+    >`select n.* from reseller_notes n join customers c on c.id=n.customer_id where c.type='aterforsaljare' order by noted_on desc nulls last,n.created_at desc`,
+    sql<
+      Omit<import("@/lib/types").ResellerHistory, "order" | "lines">[]
+    >`select * from reseller_deliveries order by delivered_on desc nulls last,created_at desc`,
+    sql<
+      OrderRow[]
+    >`select o.* from orders_overview o join customers c on c.id=o.customer_id where c.type='aterforsaljare' order by o.created_at desc`,
+    sql<
+      (OrderLine & { order_id: string })[]
+    >`select l.* from order_lines l join orders o on o.id=l.order_id join customers c on c.id=o.customer_id where c.type='aterforsaljare'`,
+  ]);
+  const byOrder = new Map(orders.map((o) => [o.id, o]));
+  return {
+    resellers,
+    notes,
+    deliveries: deliveries.map((d) => {
+      const order = d.order_id ? (byOrder.get(d.order_id) ?? null) : null;
+      return {
+        ...d,
+        order,
+        quantity: order ? Number(order.total_qty) : d.quantity,
+        note: order ? order.comment : d.note,
+        lines: lines.filter((l) => l.order_id === d.order_id),
+      };
+    }),
+  };
+}

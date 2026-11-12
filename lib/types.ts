@@ -128,3 +128,12 @@ export type ResellerDelivery = {
 };
 
 export type ActionResult = { ok: true; message?: string; id?: string } | { ok: false; error: string };
+
+export type Reseller = Customer & { contacts: { name: string; email: string }[] };
+export type ResellerNote = { id: string; customer_id: string; noted_on: string | null; body: string };
+export type ResellerHistory = {
+ id: string; customer_id: string; order_id: string | null; delivered_on: string | null;
+ follow_up_on: string | null; follow_up_manual: boolean; followed_up: boolean;
+ quantity: number; note: string | null; created_at: Date;
+ order: OrderRow | null; lines: OrderLine[];
+};
