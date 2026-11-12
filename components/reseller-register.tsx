@@ -386,6 +386,7 @@ export function ResellerRegister({
                                         />
                                       </div>
                                       <DeliveryEditor
+                                        key={d.order_id ?? d.id}
                                         delivery={d}
                                         resellers={resellers}
                                         products={products}
