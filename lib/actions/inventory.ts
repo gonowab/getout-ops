@@ -21,7 +21,7 @@ export async function registerMovements(raw: MovementInput): Promise<ActionResul
   try {
     const user = await requireUser();
     const input = schema.parse(raw);
-    if (input.rows.length === 0) return { ok: false, error: "Ange antal för minst en kortlek." };
+    if (input.rows.length === 0) return { ok: false, error: "Ange antal för minst en artikel." };
 
     if (input.type !== "justering" && input.rows.some((r) => r.quantity < 0))
       return { ok: false, error: "Inleverans och retur ska vara positiva tal. Använd justering för att minska." };

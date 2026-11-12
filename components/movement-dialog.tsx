@@ -14,12 +14,12 @@ import type { Product } from "@/lib/types";
 type Kind = "inleverans" | "justering" | "retur";
 
 const COPY: Record<Kind, { hint: string; placeholder: string }> = {
-  inleverans: { hint: "Nya kortlekar in i lagret, t.ex. en produktion.", placeholder: "t.ex. Produktion K-Print" },
+  inleverans: { hint: "Nya artiklar in i lagret, t.ex. en produktion.", placeholder: "t.ex. Produktion K-Print" },
   justering: {
     hint: "Rätta saldot efter inventering. Minus för att ta bort, t.ex. −4.",
     placeholder: "t.ex. Inventering, skadade askar",
   },
-  retur: { hint: "Kortlekar som kommit tillbaka och kan säljas igen.", placeholder: "t.ex. Retur från Bokhandeln Ystad" },
+  retur: { hint: "Artiklar som kommit tillbaka och kan säljas igen.", placeholder: "t.ex. Retur från Bokhandeln Ystad" },
 };
 
 export function MovementButton({ products }: { products: Product[] }) {
@@ -34,7 +34,7 @@ export function MovementButton({ products }: { products: Product[] }) {
   const [pending, start] = useTransition();
 
   const regions: string[] = [];
-  for (const p of products) if (!regions.includes(p.region)) regions.push(p.region);
+  for (const p of products) if (p.edition !== null && !regions.includes(p.region)) regions.push(p.region);
 
   const parse = (v: string | undefined) => {
     const n = parseInt((v ?? "").replace("−", "-"), 10);
@@ -141,6 +141,16 @@ export function MovementButton({ products }: { products: Product[] }) {
               </div>
             ))}
           </div>
+          {products.filter((p) => p.edition === null).map((p) => (
+            <Field key={p.id} label={p.name}>
+              <Input aria-label={`Antal ${p.name}`} placeholder="0"
+                inputMode={kind === "justering" ? "text" : "numeric"}
+                value={qty[p.id] ?? ""}
+                onChange={(e) => setQty((prev) => ({ ...prev, [p.id]:
+                  e.target.value.replace(kind === "justering" ? /[^\d\-−]/g : /[^\d]/g, "") }))}
+              />
+            </Field>
+          ))}
           <div className="grid grid-cols-[1fr_150px] gap-3">
             <Field label={kind === "justering" ? "Anledning" : "Notering"}>
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={COPY[kind].placeholder} />

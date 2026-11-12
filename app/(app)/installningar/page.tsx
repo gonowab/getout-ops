@@ -36,7 +36,7 @@ export default async function SettingsPage() {
   let events: ShopifyEvent[] | null = null;
   try {
     const rows = await sql<{ region: string; edition: "gammal" | "ny"; shopify_variant_id: string | null }[]>`
-      select region, edition, shopify_variant_id from products where active order by sort_order`;
+      select region, edition, shopify_variant_id from products where active and edition is not null order by sort_order`;
     const regions = [...new Set(rows.map((r) => r.region))];
     mapping = regions.map((region) => ({
       region,
@@ -80,8 +80,8 @@ export default async function SettingsPage() {
 
             <h3 className="mb-1 mt-8 text-[13px] font-semibold">Fler Shopify-produkter</h3>
             <p className="mb-3 text-[13px] text-muted">
-              Säljs en kortlek som en egen produkt i Shopify, koppla den här. Står en order som
-              ”Inga kortlekar i ordern” nedan, finns produktens variant-ID inom hakparentes i meddelandet.
+              Koppla Shopify-produkter till rätt artikel här, även tillbehör som presentpåsar.
+              Kopplingen gäller nya ordrar. Befintliga ordrar ändras inte.
             </p>
             {variants === null ? (
               <p className="rounded-md bg-warn-soft px-3 py-2 text-[13px] text-warn">

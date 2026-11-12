@@ -59,6 +59,7 @@ export type OrderSummary = {
   skane: number;
   goteborg: number;
   stockholm: number;
+  accessories: number;
   single_count: number;
   multiple_count: number;
 };
@@ -69,7 +70,8 @@ export async function getOrderSummary(view: "packa" | "skickade") {
   const [summary] = await sql<OrderSummary[]>`
     with per_order as (
       select o.id,
-        coalesce(sum(ol.quantity), 0) as qty,
+        coalesce(sum(ol.quantity) filter (where p.edition is not null), 0) as qty,
+        coalesce(sum(ol.quantity) filter (where p.edition is null), 0) as accessories,
         coalesce(sum(ol.quantity) filter (where p.region = 'Skåne'), 0) as skane,
         coalesce(sum(ol.quantity) filter (where p.region = 'Göteborg'), 0) as goteborg,
         coalesce(sum(ol.quantity) filter (where p.region = 'Stockholm'), 0) as stockholm
@@ -81,6 +83,7 @@ export async function getOrderSummary(view: "packa" | "skickade") {
     )
     select count(*)::int as order_count,
       coalesce(sum(qty), 0)::int as total_qty,
+      coalesce(sum(accessories), 0)::int as accessories,
       coalesce(sum(skane), 0)::int as skane,
       coalesce(sum(goteborg), 0)::int as goteborg,
       coalesce(sum(stockholm), 0)::int as stockholm,

@@ -78,7 +78,7 @@ export async function saveOrder(raw: OrderInput): Promise<ActionResult & { order
   try {
     const user = await requireUser();
     const input = orderSchema.parse(raw);
-    if (input.lines.length === 0) return { ok: false, error: "Lägg till minst en kortlek." };
+    if (input.lines.length === 0) return { ok: false, error: "Lägg till minst en artikel." };
     if (!input.customerId && !input.newCustomer)
       return { ok: false, error: "Välj en kund eller skriv in en ny." };
 

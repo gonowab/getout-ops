@@ -76,7 +76,7 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
               <table className="w-full text-[13px]">
                 <thead className="bg-canvas text-left text-[12px] text-muted">
                   <tr>
-                    <th className="px-4 py-2 font-medium">Kortlek</th>
+                    <th className="px-4 py-2 font-medium">Artikel</th>
                     <th className="px-4 py-2 text-right font-medium">Antal</th>
                     {hasPrices ? <th className="px-4 py-2 text-right font-medium">À-pris</th> : null}
                     {hasPrices ? <th className="px-4 py-2 text-right font-medium">Summa</th> : null}

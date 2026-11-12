@@ -33,7 +33,7 @@ export type FinanceTotals = {
 export type FinanceBucket = { start: string; value: number; orders: number };
 
 export type ChannelRow = { source: OrderSource; orders: number; qty: number; value: number };
-export type ProductRow = { product_id: number; region: string; edition: "gammal" | "ny"; qty: number; value: number };
+export type ProductRow = { product_id: number; region: string; edition: "gammal" | "ny" | null; qty: number; value: number };
 export type OpenInvoice = {
   order_number: number;
   customer_name: string | null;
@@ -119,7 +119,7 @@ export async function getFinance(from: string, to: string, bucket: "day" | "mont
       with p as (${perOrder})
       select source, count(*) as orders, coalesce(sum(qty), 0) as qty, coalesce(sum(value), 0) as value
       from p group by source order by coalesce(sum(value), 0) desc, count(*) desc`,
-    sql<{ product_id: number; region: string; edition: "gammal" | "ny"; qty: string; value: string }[]>`
+    sql<{ product_id: number; region: string; edition: "gammal" | "ny" | null; qty: string; value: string }[]>`
       select pr.id as product_id, pr.region, pr.edition,
              coalesce(sum(l.quantity), 0) as qty,
              coalesce(sum(l.quantity * l.unit_price), 0) as value

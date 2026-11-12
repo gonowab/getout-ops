@@ -54,7 +54,7 @@ export function StockBoard({ stock, detailed = false }: { stock: StockLevel[]; d
             {g.items.map((s) => (
               <div key={s.product_id}>
                 <div className="flex items-center justify-between gap-2 text-[13px]">
-                  <EditionTag edition={s.edition} />
+                  {s.edition ? <EditionTag edition={s.edition} /> : <span>Tillbehör</span>}
                   <span className="tabular text-ink">
                     <span className={cn("font-medium", s.lagt_saldo && "text-warn")}>{num(s.tillgangligt)}</span>
                     {detailed ? <span className="text-subtle"> / {num(s.totalt)}</span> : null}
@@ -64,7 +64,7 @@ export function StockBoard({ stock, detailed = false }: { stock: StockLevel[]; d
                 {detailed ? (
                   <div className="mt-1 flex justify-between text-[11px] text-subtle tabular">
                     <span>Reserverat {num(s.reserverat)}</span>
-                    <span>{s.low_stock_threshold > 0 ? `Varning under ${num(s.low_stock_threshold)}` : "Säljs slut"}</span>
+                    <span>{s.low_stock_threshold > 0 ? `Varning under ${num(s.low_stock_threshold)}` : s.edition === "gammal" ? "Säljs slut" : "Ingen varning"}</span>
                   </div>
                 ) : null}
               </div>
@@ -85,7 +85,7 @@ function StockBar({
   totalt: number;
   reserverat: number;
   max: number;
-  edition: "gammal" | "ny";
+  edition: "gammal" | "ny" | null;
 }) {
   const avail = Math.max(0, totalt - reserverat);
   const wAvail = (avail / max) * 100;

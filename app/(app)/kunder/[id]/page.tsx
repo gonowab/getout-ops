@@ -62,7 +62,7 @@ export default async function CustomerPage(props: PageProps<"/kunder/[id]">) {
         />
         <Stat
           label="Ordrar"
-          value={`${active.length} ordrar, ${num(totalQty)} kortlekar`}
+          value={`${active.length} ordrar, ${num(totalQty)} artiklar`}
           sub={active[0] ? `Senast ${shortDate(active[0].order_date)}` : null}
         />
       </dl>

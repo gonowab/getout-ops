@@ -75,7 +75,7 @@ export default async function KunderPage(props: PageProps<"/kunder">) {
                 <th className="px-4 py-2 font-medium">Kontakt</th>
                 <th className="px-4 py-2 font-medium">Ort</th>
                 <th className="px-4 py-2 text-right font-medium">Ordrar</th>
-                <th className="px-4 py-2 text-right font-medium">Kortlekar</th>
+                <th className="px-4 py-2 text-right font-medium">Artiklar</th>
                 <th className="px-4 py-2 font-medium">Senaste order</th>
               </tr>
             </thead>

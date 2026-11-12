@@ -7,6 +7,7 @@ import { useToast } from "@/components/toast";
 import { changePassword } from "@/lib/actions/auth";
 import { updateThreshold } from "@/lib/actions/inventory";
 import { addShopifyVariant, removeShopifyVariant, setShopifyEdition } from "@/lib/actions/shopify";
+import { productLabel } from "@/lib/labels";
 import { Segmented } from "@/components/order-form";
 import type { Product } from "@/lib/types";
 
@@ -198,7 +199,7 @@ export function ShopifyVariantsForm({
             className="w-56 tabular"
           />
         </Field>
-        <Field label="Kortlek">
+        <Field label="Artikel">
           <select
             className="h-8 rounded-md border border-line bg-surface px-2 text-[14px] text-ink"
             value={productId}
@@ -206,7 +207,7 @@ export function ShopifyVariantsForm({
           >
             {products.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.region} – {p.edition === "gammal" ? "gammal ask" : "ny ask"}
+                {productLabel(p)}
               </option>
             ))}
           </select>
