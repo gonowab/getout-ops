@@ -112,7 +112,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
   };
 
   return (
-    <>
+    <div data-orders-page>
       <PageHeader title="Ordrar" description={current.hint} actions={<NewOrderButton />} />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line">
@@ -169,7 +169,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
             })}
           </nav>
         </aside>
-        <div className={cn("min-w-0", summary && "grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_260px]")}>
+        <div className="grid min-w-0 items-start gap-5">
         <div className="min-w-0">
           {view === "packa" ? (
             <PostnordBatch key={`${source}:${q}:${group}`} rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
@@ -206,6 +206,6 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
         ) : null}
         </div>
       </div>
-    </>
+    </div>
   );
 }

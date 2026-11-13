@@ -62,14 +62,14 @@ export function OrderTable({
             <th className="px-4 py-2 font-medium">Status</th>
             <th className="px-4 py-2 font-medium">Faktura</th>
             <th className="px-4 py-2 font-medium">Datum</th>
-            {quickAction ? <th className="px-4 py-2" /> : null}
+            {quickAction ? <th scope="col" className="sticky right-0 z-20 bg-canvas px-4 py-2"><span className="sr-only">Åtgärd</span></th> : null}
           </tr>
         </thead>
         <tbody>
           {orders.map((o) => (
             <tr
               key={o.id}
-              className={cn("relative border-t border-line hover:bg-canvas", o.status === "makulerad" && "opacity-60")}
+              className={cn("group relative border-t border-line hover:bg-canvas", o.status === "makulerad" && "opacity-60")}
             >
               {selectable ? (
                 <td className="relative z-10 w-10 py-2.5 pl-4 pr-0">
@@ -112,7 +112,7 @@ export function OrderTable({
               </td>
               <td className="whitespace-nowrap px-4 py-2.5 text-muted tabular">{shortDate(o.order_date)}</td>
               {quickAction ? (
-                <td className="relative z-10 whitespace-nowrap px-4 py-2 text-right">
+                <td className="sticky right-0 z-20 whitespace-nowrap bg-surface px-4 py-2 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)] group-hover:bg-canvas">
                   <QuickStatusButton orderId={o.id} status={o.status} totalQty={o.total_qty} />
                 </td>
               ) : null}
