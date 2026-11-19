@@ -9,6 +9,7 @@ import { NewOrderButton } from "./new-order-button";
 import { PostnordBatch } from "@/components/postnord-batch";
 import { postnordBookingStatus } from "@/lib/postnord";
 import { getOrderLinesFor, getOrders, getProducts, getOrderSummary, type OrderFilter } from "@/lib/queries";
+import { GIFT_BAG_SKU, getShopifyGiftWrapChoices, type GiftWrapChoices } from "@/lib/shopify-admin";
 import { sql } from "@/lib/db";
 
 export const metadata = { title: "Ordrar" };
@@ -75,6 +76,17 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
   ];
   const orders = group ? allOrders.filter((o) => orderGroups.get(o.id) === group) : allOrders;
 
+  const giftWrapByOrder = new Map<string, GiftWrapChoices | null>();
+  if (view === "packa" || view === "hantera") {
+    const giftBagOrders = orders.filter((o) => o.shopify_order_id &&
+      lines.get(o.id)?.some((line) => byProduct.get(line.product_id)?.sku === GIFT_BAG_SKU));
+    for (let i = 0; i < giftBagOrders.length; i += 5) {
+      await Promise.all(giftBagOrders.slice(i, i + 5).map(async (o) => {
+        giftWrapByOrder.set(o.id, o.shopify_order_id ? await getShopifyGiftWrapChoices(o.shopify_order_id) : null);
+      }));
+    }
+  }
+
   // Att packa: ordrar som kan bokas hos PostNord, och dagens bokningar (för utskrift av etiketter)
   const toBook =
     view === "packa"
@@ -112,7 +124,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
   };
 
   return (
-    <div data-orders-page>
+    <>
       <PageHeader title="Ordrar" description={current.hint} actions={<NewOrderButton />} />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line">
@@ -169,7 +181,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
             })}
           </nav>
         </aside>
-        <div className="grid min-w-0 items-start gap-5">
+        <div className={cn("min-w-0", summary && "grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_260px]")}>
         <div className="min-w-0">
           {view === "packa" ? (
             <PostnordBatch key={`${source}:${q}:${group}`} rows={toBook} bookedToday={bookedToday} bookingBlocked={postnordBookingStatus()} />
@@ -195,6 +207,7 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
                 orders={orders}
                 lines={lines}
                 products={products}
+                giftWrapByOrder={giftWrapByOrder}
                 quickAction={view === "hantera" || view === "packa" || view === "skickade"}
                 selectable={view === "hantera" || view === "packa" || view === "alla"}
               />
@@ -206,6 +219,6 @@ export default async function OrdrarPage(props: PageProps<"/ordrar">) {
         ) : null}
         </div>
       </div>
-    </div>
+    </>
   );
 }
