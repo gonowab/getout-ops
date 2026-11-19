@@ -1,3 +1,5 @@
+import { GiftWrapInstruction } from "@/components/order-table";
+import { GIFT_BAG_SKU, getShopifyGiftWrapChoices } from "@/lib/shopify-admin";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -31,6 +33,9 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
   const hasPrices = lines.some((l) => l.unit_price !== null);
   const value = lines.reduce((s, l) => s + (l.unit_price ? Number(l.unit_price) * l.quantity : 0), 0);
   const isShopify = o.source === "shopify";
+  const giftWrap = o.shopify_order_id && lines.some((line) => byId.get(line.product_id)?.sku === GIFT_BAG_SKU)
+    ? await getShopifyGiftWrapChoices(o.shopify_order_id)
+    : undefined;
 
   return (
     <>
@@ -92,6 +97,9 @@ export default async function OrderPage(props: PageProps<"/ordrar/[nr]">) {
                             <span className="text-ink">{p?.name ?? "Okänd"}</span>
                             {p ? <EditionTag edition={p.edition} /> : null}
                           </span>
+                          {p?.sku === GIFT_BAG_SKU && giftWrap !== undefined ? (
+                            <GiftWrapInstruction choices={giftWrap} />
+                          ) : null}
                         </td>
                         <td className="px-4 py-2.5 text-right font-medium tabular">{num(l.quantity)}</td>
                         {hasPrices ? (
