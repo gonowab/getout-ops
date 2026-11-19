@@ -26,7 +26,7 @@ function shopDomain() {
   return host.endsWith(".myshopify.com") ? host : `${host}.myshopify.com`;
 }
 
-async function accessToken(): Promise<string> {
+async function accessToken(signal?: AbortSignal): Promise<string> {
   if (cached && cached.expiresAt > Date.now() + 60_000) return cached.value;
   if (!isShopifyAdminConfigured()) {
     throw new Error("Shopify-kopplingen är inte inställd (SHOPIFY_SHOP, SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET)");
@@ -39,6 +39,7 @@ async function accessToken(): Promise<string> {
       client_id: process.env.SHOPIFY_CLIENT_ID!,
       client_secret: process.env.SHOPIFY_CLIENT_SECRET!,
     }),
+    signal,
     cache: "no-store",
   });
   if (!res.ok) {
@@ -50,11 +51,12 @@ async function accessToken(): Promise<string> {
   return cached.value;
 }
 
-async function gql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+async function gql<T>(query: string, variables: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`https://${shopDomain()}/admin/api/${API_VERSION}/graphql.json`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": await accessToken() },
+    headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": await accessToken(signal) },
     body: JSON.stringify({ query, variables }),
+    signal,
     cache: "no-store",
   });
   if (res.status === 401) cached = null;
@@ -63,6 +65,60 @@ async function gql<T>(query: string, variables: Record<string, unknown>): Promis
     throw new Error(`Shopify svarade med fel: ${json.errors?.map((e) => e.message).join("; ") ?? res.status}`);
   }
   return json.data as T;
+}
+
+export const GIFT_BAG_SKU = "GO-PRESENTPASE";
+export const GIFT_WRAP_LABEL = "Kortlek att slå in";
+export type GiftWrapChoices = { deck: string | null; quantity: number }[];
+
+type GiftWrapOrder = {
+  order: {
+    lineItems: {
+      nodes: {
+        sku: string | null;
+        title: string;
+        currentQuantity: number;
+        customAttributes: { key: string; value: string | null }[];
+      }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+    };
+  } | null;
+};
+
+/** Hämtar packinstruktionen även på ordrar som importerats sedan tidigare. */
+export async function getShopifyGiftWrapChoices(shopifyOrderId: string): Promise<GiftWrapChoices | null> {
+  const id = shopifyOrderId.startsWith("gid://") ? shopifyOrderId : `gid://shopify/Order/${shopifyOrderId}`;
+  const quantities = new Map<string | null, number>();
+  const signal = AbortSignal.timeout(5000);
+  let after: string | null = null;
+  try {
+    do {
+      const data: GiftWrapOrder = await gql<GiftWrapOrder>(
+        `query OrderGiftWrap($id: ID!, $after: String) {
+          order(id: $id) {
+            lineItems(first: 50, after: $after) {
+              nodes { sku title currentQuantity customAttributes { key value } }
+              pageInfo { hasNextPage endCursor }
+            }
+          }
+        }`,
+        { id, after },
+        signal,
+      );
+      if (!data.order) return null;
+      const { nodes, pageInfo } = data.order.lineItems;
+      for (const line of nodes) {
+        if (line.currentQuantity <= 0) continue;
+        if (line.sku !== GIFT_BAG_SKU && line.title !== "Presentpåse till kortlek") continue;
+        const deck = line.customAttributes.find(({ key }) => key === GIFT_WRAP_LABEL)?.value?.trim() || null;
+        quantities.set(deck, (quantities.get(deck) ?? 0) + line.currentQuantity);
+      }
+      after = pageInfo.hasNextPage ? pageInfo.endCursor : null;
+    } while (after);
+    return Array.from(quantities, ([deck, quantity]) => ({ deck, quantity }));
+  } catch {
+    return null;
+  }
 }
 
 export const postnordTrackingUrl = (trackingNumber: string) =>
