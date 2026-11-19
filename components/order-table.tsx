@@ -5,6 +5,7 @@ import { QuickStatusButton } from "@/components/order-actions";
 import { HeaderCheckbox, RowCheckbox } from "@/components/bulk-select";
 import { num, shortDate } from "@/lib/format";
 import { orderRef, SHIPPED_STATUSES } from "@/lib/labels";
+import { GIFT_WRAP_LABEL, type GiftWrapChoices } from "@/lib/shopify-admin";
 import type { OrderLine, OrderRow, Product } from "@/lib/types";
 
 export function ProductChips({ lines, products }: { lines: OrderLine[]; products: Product[] }) {
@@ -29,10 +30,27 @@ export function ProductChips({ lines, products }: { lines: OrderLine[]; products
   );
 }
 
+export function GiftWrapInstruction({ choices }: { choices: GiftWrapChoices | null }) {
+  const total = choices?.reduce((sum, choice) => sum + choice.quantity, 0) ?? 0;
+  return (
+    <div className="mt-1 text-[13px] text-ink">
+      <span className="font-medium">{GIFT_WRAP_LABEL}: </span>
+      {choices === null ? "Kunde inte hämta valet. Kontrollera i Shopify." : total === 0 ? "Inget val hittades i Shopify." : (
+        choices.map(({ deck, quantity }) => (
+          <span key={deck ?? ""} className={total > 1 ? "block" : undefined}>
+            {total > 1 ? `${quantity} × ` : ""}{deck ?? "Val saknas"}
+          </span>
+        ))
+      )}
+    </div>
+  );
+}
+
 export function OrderTable({
   orders,
   lines,
   products,
+  giftWrapByOrder,
   quickAction = false,
   hideCustomer = false,
   selectable = false,
@@ -40,6 +58,7 @@ export function OrderTable({
   orders: OrderRow[];
   lines: Map<string, OrderLine[]>;
   products: Product[];
+  giftWrapByOrder?: Map<string, GiftWrapChoices | null>;
   quickAction?: boolean;
   hideCustomer?: boolean;
   /** Kryssrutor för att välja flera ordrar. Kräver att tabellen ligger inom BulkProvider. */
@@ -62,14 +81,14 @@ export function OrderTable({
             <th className="px-4 py-2 font-medium">Status</th>
             <th className="px-4 py-2 font-medium">Faktura</th>
             <th className="px-4 py-2 font-medium">Datum</th>
-            {quickAction ? <th scope="col" className="sticky right-0 z-20 bg-canvas px-4 py-2"><span className="sr-only">Åtgärd</span></th> : null}
+            {quickAction ? <th className="px-4 py-2" /> : null}
           </tr>
         </thead>
         <tbody>
           {orders.map((o) => (
             <tr
               key={o.id}
-              className={cn("group relative border-t border-line hover:bg-canvas", o.status === "makulerad" && "opacity-60")}
+              className={cn("relative border-t border-line hover:bg-canvas", o.status === "makulerad" && "opacity-60")}
             >
               {selectable ? (
                 <td className="relative z-10 w-10 py-2.5 pl-4 pr-0">
@@ -95,6 +114,7 @@ export function OrderTable({
               ) : null}
               <td className="px-4 py-2.5">
                 <ProductChips lines={lines.get(o.id) ?? []} products={products} />
+                {giftWrapByOrder?.has(o.id) ? <GiftWrapInstruction choices={giftWrapByOrder.get(o.id) ?? null} /> : null}
               </td>
               <td className="px-4 py-2.5 text-right font-medium tabular">{num(o.total_qty)}</td>
               <td className="whitespace-nowrap px-4 py-2.5">
@@ -112,7 +132,7 @@ export function OrderTable({
               </td>
               <td className="whitespace-nowrap px-4 py-2.5 text-muted tabular">{shortDate(o.order_date)}</td>
               {quickAction ? (
-                <td className="sticky right-0 z-20 whitespace-nowrap bg-surface px-4 py-2 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)] group-hover:bg-canvas">
+                <td className="relative z-10 whitespace-nowrap px-4 py-2 text-right">
                   <QuickStatusButton orderId={o.id} status={o.status} totalQty={o.total_qty} />
                 </td>
               ) : null}
