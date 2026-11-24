@@ -95,3 +95,10 @@ npm run dev
 ```
 
 `DEV_AUTH` fungerar aldrig på Vercel, oavsett vad variabeln är satt till.
+
+## Utlägg – registrering och hantering
+
+1. Kör `supabase/migrations/0011_expenses.sql` i Supabase SQL Editor.
+2. GetOuts befintliga produktionsprojekt har `info@getout.nu` som utläggsansvarig. I andra miljöer, eller för att byta ansvarig, sätter ni `EXPENSE_ADMIN_EMAIL` i Vercel till den ansvarigas adress i Supabase Authentication och driftsätter om.
+
+Inloggade kollegor registrerar utlägg via **Utlägg → Nytt utlägg**. Filip öppnar **Hantera utlägg** för att se kvitton, totalsumman att ersätta och ändra status efter utbetalning. Appen registrerar status. Själva utbetalningen görs separat.
