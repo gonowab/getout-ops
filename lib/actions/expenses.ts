@@ -32,20 +32,21 @@ export async function submitExpense(form: FormData) {
     return "Kvittot kunde inte läsas. Välj en annan bild eller PDF.";
   }
 
+  let saved;
   try {
-    const [saved] = await sql<{ id: string }[]>`
+    [saved] = await sql<{ expense_number: string }[]>`
       insert into public.expenses (id, person, reason, amount_ore, receipt, submitted_by)
       values (${id}, ${person}, ${reason}, ${amount}, ${receipt}, ${user.id})
       on conflict (id) do update set id = excluded.id
       where expenses.submitted_by = excluded.submitted_by
-      returning id`;
+      returning expense_number`;
     if (!saved) return "Utlägget kunde inte sparas. Öppna Nytt utlägg igen.";
   } catch (error) {
     console.error("[expenses] Kunde inte spara utlägg", error instanceof Error ? error.message : "");
     return "Det gick inte att spara utlägget. Dina uppgifter finns kvar så att du kan försöka igen.";
   }
   revalidatePath("/utlagg/hantera");
-  return null;
+  return { expenseNumber: saved.expense_number };
 }
 
 export async function updateExpenseStatus(id: string, previous: string, _: string | null, form: FormData) {

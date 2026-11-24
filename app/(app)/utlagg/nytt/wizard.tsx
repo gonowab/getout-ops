@@ -42,15 +42,15 @@ export function ExpenseWizard() {
   const [receipt, setReceipt] = useState<{ file: File; url: string } | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [expenseNumber, setExpenseNumber] = useState<string | null>(null);
   const id = useRef<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const ore = parseExpenseAmount(amount);
   const receiptUrl = receipt?.url;
 
   useEffect(() => {
-    if (step > 0 || done) heading.current?.focus();
-  }, [step, done]);
+    if (step > 0 || expenseNumber) heading.current?.focus();
+  }, [step, expenseNumber]);
 
   useEffect(() => () => {
     if (receiptUrl) URL.revokeObjectURL(receiptUrl);
@@ -109,9 +109,9 @@ export function ExpenseWizard() {
       form.set("reason", reason);
       form.set("amount", amount);
       form.set("receipt", receipt.file, receipt.file.type === pdfReceiptType ? "kvitto.pdf" : "kvitto.jpg");
-      const message = await submitExpense(form);
-      if (message) setError(message);
-      else setDone(true);
+      const result = await submitExpense(form);
+      if (typeof result === "string") setError(result);
+      else setExpenseNumber(result.expenseNumber);
     } catch {
       setError("Det gick inte att skicka utlägget. Försök igen.");
     } finally {
@@ -119,10 +119,11 @@ export function ExpenseWizard() {
     }
   }
 
-  if (done) {
+  if (expenseNumber) {
     return (
       <section className="max-w-lg rounded-xl border border-line bg-surface p-5 sm:p-7">
         <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold">Utlägget är inskickat</h2>
+        <p className="mt-2 text-sm font-medium">Utlägg nr {expenseNumber}</p>
         <p className="mb-5 mt-2 text-sm text-muted">{person} · {formatExpenseAmount(ore ?? 0)}</p>
         <ButtonLink href="/utlagg">Tillbaka till Utlägg</ButtonLink>
       </section>
