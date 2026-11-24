@@ -7,6 +7,16 @@ export const expenseStatuses = {
 
 export type ExpenseStatus = keyof typeof expenseStatuses;
 export const receiptMaxBytes = 900_000;
+export const pdfReceiptType = "application/pdf";
+export const pdfReceiptHeader = "%PDF-";
+
+export function isPdfReceipt(bytes: Uint8Array) {
+  const decoder = new TextDecoder();
+  const header = decoder.decode(bytes.subarray(0, 8));
+  const tail = decoder.decode(bytes.subarray(-1024));
+  return /^%PDF-[12]\.\d$/.test(header) && /%%EOF[\t\n\f\r ]*$/.test(tail);
+}
+
 export const expenseIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseExpenseAmount(input: string) {

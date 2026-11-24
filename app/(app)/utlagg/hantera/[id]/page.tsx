@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { ButtonLink, PageHeader } from "@/components/ui";
+import { ButtonLink, PageHeader, buttonClass } from "@/components/ui";
 import { requireExpenseManager } from "@/lib/expense-access";
-import { expenseIdPattern, formatExpenseAmount, type ExpenseStatus } from "@/lib/expenses";
+import { expenseIdPattern, formatExpenseAmount, pdfReceiptHeader, type ExpenseStatus } from "@/lib/expenses";
 import { dateTime } from "@/lib/format";
 import { sql } from "@/lib/db";
 import { ExpenseStatusForm } from "./status-form";
@@ -13,9 +13,10 @@ export default async function ExpenseDetailsPage({ params }: { params: Promise<{
 
   const [expense] = await sql<{
     person: string; reason: string; amount_ore: number; created_at: Date; status: ExpenseStatus;
-    status_updated_at: Date | null;
+    status_updated_at: Date | null; receipt_is_pdf: boolean;
   }[]>`
-    select person, reason, amount_ore, created_at, status, status_updated_at
+    select person, reason, amount_ore, created_at, status, status_updated_at,
+      substring(receipt from 1 for ${pdfReceiptHeader.length}) = convert_to(${pdfReceiptHeader}, 'UTF8') as receipt_is_pdf
     from public.expenses where id = ${id}`;
   if (!expense) notFound();
   const receiptUrl = `/api/utlagg/${id}/kvitto`;
@@ -35,10 +36,14 @@ export default async function ExpenseDetailsPage({ params }: { params: Promise<{
         </section>
         <section className="rounded-xl border border-line bg-surface p-5">
           <h2 className="mb-3 text-sm font-semibold">Kvitto</h2>
-          <a href={receiptUrl} target="_blank" rel="noreferrer" className="block w-fit">
-            {/* eslint-disable-next-line @next/next/no-img-element -- Kvittot kräver den inloggade användarens session. */}
-            <img src={receiptUrl} alt="Öppna kvittot i full storlek" className="max-h-[65vh] max-w-full rounded-md border border-line object-contain" />
-          </a>
+          {expense.receipt_is_pdf ? (
+            <a href={receiptUrl} className={buttonClass()}>Ladda ner kvitto (PDF)</a>
+          ) : (
+            <a href={receiptUrl} target="_blank" rel="noreferrer" className="block w-fit">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Kvittot kräver den inloggade användarens session. */}
+              <img src={receiptUrl} alt="Öppna kvittot i full storlek" className="max-h-[65vh] max-w-full rounded-md border border-line object-contain" />
+            </a>
+          )}
         </section>
       </div>
     </>

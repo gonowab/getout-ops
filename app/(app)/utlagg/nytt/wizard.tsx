@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, ButtonLink, Field, Input, Textarea, cn } from "@/components/ui";
-import { expensePeople, formatExpenseAmount, parseExpenseAmount, receiptMaxBytes } from "@/lib/expenses";
+import { Button, ButtonLink, Field, Input, Textarea, buttonClass, cn } from "@/components/ui";
+import { expensePeople, formatExpenseAmount, isPdfReceipt, parseExpenseAmount, pdfReceiptType, receiptMaxBytes } from "@/lib/expenses";
 import { submitExpense } from "@/lib/actions/expenses";
 
 const steps = ["Vem gjorde utlägget?", "Vad gällde köpet?", "Vad var totalsumman?", "Lägg till kvittot", "Granska utlägget"];
 
-async function prepareReceipt(file: File) {
+async function prepareReceiptImage(file: File) {
   const url = URL.createObjectURL(file);
   try {
     const image = new Image();
@@ -56,15 +56,28 @@ export function ExpenseWizard() {
     if (receiptUrl) URL.revokeObjectURL(receiptUrl);
   }, [receiptUrl]);
 
-  async function chooseReceipt(file?: File) {
+  async function chooseReceipt(kind: "image" | "pdf", file?: File) {
     if (!file || busy) return;
     setError("");
     setBusy(true);
     try {
-      const image = await prepareReceipt(file);
-      setReceipt({ file: image, url: URL.createObjectURL(image) });
+      let attachment: File;
+      if (kind === "pdf") {
+        if (file.size > receiptMaxBytes) {
+          setError("PDF-filen är för stor. Välj en PDF på högst 900 kB.");
+          return;
+        }
+        if (!isPdfReceipt(new Uint8Array(await file.arrayBuffer()))) {
+          setError("PDF-filen kunde inte läsas. Välj en annan PDF.");
+          return;
+        }
+        attachment = new File([file], file.name, { type: pdfReceiptType });
+      } else {
+        attachment = await prepareReceiptImage(file);
+      }
+      setReceipt({ file: attachment, url: URL.createObjectURL(attachment) });
     } catch {
-      setError("Bilden kunde inte läsas eller är för stor. Försök med ett nytt foto i JPG eller PNG.");
+      setError(kind === "pdf" ? "PDF-filen kunde inte läsas." : "Bilden kunde inte läsas. Försök med ett nytt foto i JPG eller PNG.");
     } finally {
       setBusy(false);
     }
@@ -77,7 +90,7 @@ export function ExpenseWizard() {
       person ? "" : "Välj en person.",
       reason.trim() ? "" : "Skriv en kort anledning.",
       ore ? "" : "Ange ett belopp över 0 kr med högst två decimaler.",
-      receipt ? "" : "Lägg till ett foto av kvittot.",
+      receipt ? "" : "Lägg till kvittot som bild eller PDF.",
     ];
     setError(validation[step] ?? "");
     if (validation[step]) return;
@@ -145,11 +158,17 @@ export function ExpenseWizard() {
         </Field>
       )}
       {step === 3 && (
-        <Field label={receipt ? "Byt kvittobild" : "Foto av kvittot"} htmlFor="expense-receipt"
-          hint="Se till att hela kvittot och totalsumman går att läsa.">
-          <Input id="expense-receipt" type="file" accept="image/*" className="h-auto py-2" disabled={busy}
-            onChange={(event) => { void chooseReceipt(event.target.files?.[0]); event.target.value = ""; }} />
-        </Field>
+        <div className="space-y-4">
+          <Field label="Ta ett foto eller välj en bild" htmlFor="expense-receipt"
+            hint="Se till att hela kvittot och totalsumman går att läsa.">
+            <Input id="expense-receipt" type="file" accept="image/*" className="h-auto py-2" disabled={busy}
+              onChange={(event) => { void chooseReceipt("image", event.target.files?.[0]); event.target.value = ""; }} />
+          </Field>
+          <Field label="Eller välj en PDF" htmlFor="expense-receipt-pdf" hint="Högst 900 kB.">
+            <Input id="expense-receipt-pdf" type="file" accept=".pdf,application/pdf" className="h-auto py-2" disabled={busy}
+              onChange={(event) => { void chooseReceipt("pdf", event.target.files?.[0]); event.target.value = ""; }} />
+          </Field>
+        </div>
       )}
       {step === 4 && (
         <dl className="space-y-2 text-sm">
@@ -158,18 +177,23 @@ export function ExpenseWizard() {
           <div><dt className="text-muted">Totalt</dt><dd className="font-semibold">{formatExpenseAmount(ore ?? 0)}</dd></div>
         </dl>
       )}
-      {step >= 3 && receipt && (
+      {step >= 3 && receipt && (receipt.file.type === pdfReceiptType ? (
+        <div className="mt-4 space-y-2 text-sm">
+          <p className="break-words">Valt kvitto: {receipt.file.name}</p>
+          <a href={receipt.url} target="_blank" rel="noreferrer" className={buttonClass()}>Öppna vald PDF</a>
+        </div>
+      ) : (
         <a href={receipt.url} target="_blank" rel="noreferrer" className="mt-4 block w-fit">
           {/* eslint-disable-next-line @next/next/no-img-element -- Lokal förhandsvisning via blob-URL. */}
           <img src={receipt.url} alt="Öppna kvittobilden i full storlek" className="max-h-56 max-w-full rounded-md border border-line object-contain" />
         </a>
-      )}
+      ))}
       {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
 
       <div className={cn("mt-6 flex items-center gap-2", step > 0 ? "justify-between" : "justify-end")}>
         {step > 0 && <Button className="h-10" disabled={busy} onClick={() => { setStep(step - 1); setError(""); }}>Tillbaka</Button>}
         <Button type="submit" variant="primary" className="h-10" disabled={busy}>
-          {busy ? (step === 3 ? "Läser bilden…" : "Skickar…") : step === 4 ? "Skicka in utlägg" : "Nästa"}
+          {busy ? (step === 3 ? "Läser kvittot…" : "Skickar…") : step === 4 ? "Skicka in utlägg" : "Nästa"}
         </Button>
       </div>
     </form>
