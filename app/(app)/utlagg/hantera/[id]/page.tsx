@@ -1,0 +1,46 @@
+import { notFound } from "next/navigation";
+import { ButtonLink, PageHeader } from "@/components/ui";
+import { requireExpenseManager } from "@/lib/expense-access";
+import { expenseIdPattern, formatExpenseAmount, type ExpenseStatus } from "@/lib/expenses";
+import { dateTime } from "@/lib/format";
+import { sql } from "@/lib/db";
+import { ExpenseStatusForm } from "./status-form";
+
+export default async function ExpenseDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireExpenseManager();
+  const { id } = await params;
+  if (!expenseIdPattern.test(id)) notFound();
+
+  const [expense] = await sql<{
+    person: string; reason: string; amount_ore: number; created_at: Date; status: ExpenseStatus;
+    status_updated_at: Date | null;
+  }[]>`
+    select person, reason, amount_ore, created_at, status, status_updated_at
+    from public.expenses where id = ${id}`;
+  if (!expense) notFound();
+  const receiptUrl = `/api/utlagg/${id}/kvitto`;
+
+  return (
+    <>
+      <PageHeader title={`Utlägg för ${expense.person}`} description={`Inskickat ${dateTime(expense.created_at)}`}
+        actions={<ButtonLink href="/utlagg/hantera">Tillbaka till översikten</ButtonLink>} />
+      <div className="grid max-w-4xl items-start gap-4 md:grid-cols-2">
+        <section className="space-y-4 rounded-xl border border-line bg-surface p-5">
+          <dl className="space-y-3 text-sm">
+            <div><dt className="text-muted">Anledning</dt><dd className="break-words">{expense.reason}</dd></div>
+            <div><dt className="text-muted">Totalt</dt><dd className="text-xl font-semibold">{formatExpenseAmount(expense.amount_ore)}</dd></div>
+          </dl>
+          <ExpenseStatusForm key={expense.status} id={id} status={expense.status} />
+          {expense.status_updated_at && <p className="text-xs text-muted">Status ändrad {dateTime(expense.status_updated_at)}</p>}
+        </section>
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-3 text-sm font-semibold">Kvitto</h2>
+          <a href={receiptUrl} target="_blank" rel="noreferrer" className="block w-fit">
+            {/* eslint-disable-next-line @next/next/no-img-element -- Kvittot kräver den inloggade användarens session. */}
+            <img src={receiptUrl} alt="Öppna kvittot i full storlek" className="max-h-[65vh] max-w-full rounded-md border border-line object-contain" />
+          </a>
+        </section>
+      </div>
+    </>
+  );
+}
