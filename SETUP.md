@@ -99,6 +99,6 @@ npm run dev
 ## Utlägg – registrering och hantering
 
 1. Kör `supabase/migrations/0011_expenses.sql` i Supabase SQL Editor.
-2. Lägg till `EXPENSE_ADMIN_EMAIL` i Vercel med e-postadressen till Filips användare i Supabase Authentication. Driftsätt efter ändringen.
+2. GetOuts befintliga produktionsprojekt har `info@getout.nu` som utläggsansvarig. I andra miljöer, eller för att byta ansvarig, sätter ni `EXPENSE_ADMIN_EMAIL` i Vercel till den ansvarigas adress i Supabase Authentication och driftsätter om.
 
 Inloggade kollegor registrerar utlägg via **Utlägg → Nytt utlägg**. Filip öppnar **Hantera utlägg** för att se kvitton, totalsumman att ersätta och ändra status efter utbetalning. Appen registrerar status. Själva utbetalningen görs separat.
