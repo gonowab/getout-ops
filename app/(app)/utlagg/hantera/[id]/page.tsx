@@ -12,10 +12,10 @@ export default async function ExpenseDetailsPage({ params }: { params: Promise<{
   if (!expenseIdPattern.test(id)) notFound();
 
   const [expense] = await sql<{
-    person: string; reason: string; amount_ore: number; created_at: Date; status: ExpenseStatus;
+    expense_number: string; person: string; reason: string; amount_ore: number; created_at: Date; status: ExpenseStatus;
     status_updated_at: Date | null; receipt_is_pdf: boolean;
   }[]>`
-    select person, reason, amount_ore, created_at, status, status_updated_at,
+    select expense_number, person, reason, amount_ore, created_at, status, status_updated_at,
       substring(receipt from 1 for ${pdfReceiptHeader.length}) = convert_to(${pdfReceiptHeader}, 'UTF8') as receipt_is_pdf
     from public.expenses where id = ${id}`;
   if (!expense) notFound();
@@ -23,7 +23,7 @@ export default async function ExpenseDetailsPage({ params }: { params: Promise<{
 
   return (
     <>
-      <PageHeader title={`Utlägg för ${expense.person}`} description={`Inskickat ${dateTime(expense.created_at)}`}
+      <PageHeader title={`Utlägg nr ${expense.expense_number} · ${expense.person}`} description={`Inskickat ${dateTime(expense.created_at)}`}
         actions={<ButtonLink href="/utlagg/hantera">Tillbaka till översikten</ButtonLink>} />
       <div className="grid max-w-4xl items-start gap-4 md:grid-cols-2">
         <section className="space-y-4 rounded-xl border border-line bg-surface p-5">
@@ -36,14 +36,15 @@ export default async function ExpenseDetailsPage({ params }: { params: Promise<{
         </section>
         <section className="rounded-xl border border-line bg-surface p-5">
           <h2 className="mb-3 text-sm font-semibold">Kvitto</h2>
-          {expense.receipt_is_pdf ? (
-            <a href={receiptUrl} className={buttonClass()}>Ladda ner kvitto (PDF)</a>
-          ) : (
+          {!expense.receipt_is_pdf && (
             <a href={receiptUrl} target="_blank" rel="noreferrer" className="block w-fit">
               {/* eslint-disable-next-line @next/next/no-img-element -- Kvittot kräver den inloggade användarens session. */}
               <img src={receiptUrl} alt="Öppna kvittot i full storlek" className="max-h-[65vh] max-w-full rounded-md border border-line object-contain" />
             </a>
           )}
+          <a href={`${receiptUrl}?download=1`} className={buttonClass("secondary", "md", expense.receipt_is_pdf ? undefined : "mt-3")}>
+            {expense.receipt_is_pdf ? "Ladda ner kvitto (PDF)" : "Ladda ner kvitto (JPG)"}
+          </a>
         </section>
       </div>
     </>
