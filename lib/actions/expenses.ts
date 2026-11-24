@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { requireExpenseManager } from "@/lib/expense-access";
-import { expenseIdPattern, expensePeople, expenseStatuses, parseExpenseAmount, receiptMaxBytes } from "@/lib/expenses";
+import { expenseIdPattern, expensePeople, expenseStatuses, isPdfReceipt, parseExpenseAmount, pdfReceiptType, receiptMaxBytes } from "@/lib/expenses";
 
 export async function submitExpense(form: FormData) {
   const user = await requireUser();
@@ -18,12 +18,16 @@ export async function submitExpense(form: FormData) {
   if (!expensePeople.some((name) => name === person)) return "Välj vem som gjorde utlägget.";
   if (!reason || reason.length > 160) return "Ange en anledning på högst 160 tecken.";
   if (amount === null) return "Ange ett giltigt belopp i kronor.";
-  if (!(file instanceof File) || file.type !== "image/jpeg" || file.size < 4 || file.size > receiptMaxBytes) {
-    return "Lägg till ett läsbart foto av kvittot.";
+  if (!(file instanceof File) || file.size < 4) {
+    return "Lägg till kvittot som bild eller PDF.";
   }
+  if (file.size > receiptMaxBytes) return "Kvittot får vara högst 900 kB.";
+
   const receipt = Buffer.from(await file.arrayBuffer());
-  if (receipt[0] !== 0xff || receipt[1] !== 0xd8 || receipt.at(-2) !== 0xff || receipt.at(-1) !== 0xd9) {
-    return "Kvittobilden kunde inte läsas. Välj bilden igen.";
+  const validImage = file.type === "image/jpeg"
+    && receipt[0] === 0xff && receipt[1] === 0xd8 && receipt.at(-2) === 0xff && receipt.at(-1) === 0xd9;
+  if (!validImage && !(file.type === pdfReceiptType && isPdfReceipt(receipt))) {
+    return "Kvittot kunde inte läsas. Välj en annan bild eller PDF.";
   }
 
   try {
