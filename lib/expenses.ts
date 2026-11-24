@@ -6,7 +6,8 @@ export const expenseStatuses = {
 } as const;
 
 export type ExpenseStatus = keyof typeof expenseStatuses;
-export const receiptMaxBytes = 900_000;
+export const imageReceiptMaxBytes = 900_000;
+export const pdfReceiptMaxBytes = 4_000_000;
 export const pdfReceiptType = "application/pdf";
 export const pdfReceiptHeader = "%PDF-";
 

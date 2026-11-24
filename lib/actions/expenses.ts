@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { requireExpenseManager } from "@/lib/expense-access";
-import { expenseIdPattern, expensePeople, expenseStatuses, isPdfReceipt, parseExpenseAmount, pdfReceiptType, receiptMaxBytes } from "@/lib/expenses";
+import { expenseIdPattern, expensePeople, expenseStatuses, imageReceiptMaxBytes, isPdfReceipt, parseExpenseAmount, pdfReceiptMaxBytes, pdfReceiptType } from "@/lib/expenses";
 
 export async function submitExpense(form: FormData) {
   const user = await requireUser();
@@ -21,12 +21,14 @@ export async function submitExpense(form: FormData) {
   if (!(file instanceof File) || file.size < 4) {
     return "Lägg till kvittot som bild eller PDF.";
   }
-  if (file.size > receiptMaxBytes) return "Kvittot får vara högst 900 kB.";
+  const isPdf = file.type === pdfReceiptType;
+  if (isPdf && file.size > pdfReceiptMaxBytes) return "PDF-kvittot får vara högst 4 MB.";
+  if (!isPdf && file.size > imageReceiptMaxBytes) return "Kvittobilden är för stor. Välj bilden igen.";
 
   const receipt = Buffer.from(await file.arrayBuffer());
   const validImage = file.type === "image/jpeg"
     && receipt[0] === 0xff && receipt[1] === 0xd8 && receipt.at(-2) === 0xff && receipt.at(-1) === 0xd9;
-  if (!validImage && !(file.type === pdfReceiptType && isPdfReceipt(receipt))) {
+  if (!validImage && !(isPdf && isPdfReceipt(receipt))) {
     return "Kvittot kunde inte läsas. Välj en annan bild eller PDF.";
   }
 

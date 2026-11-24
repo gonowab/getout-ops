@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, ButtonLink, Field, Input, Textarea, buttonClass, cn } from "@/components/ui";
-import { expensePeople, formatExpenseAmount, isPdfReceipt, parseExpenseAmount, pdfReceiptType, receiptMaxBytes } from "@/lib/expenses";
+import { expensePeople, formatExpenseAmount, imageReceiptMaxBytes, isPdfReceipt, parseExpenseAmount, pdfReceiptMaxBytes, pdfReceiptType } from "@/lib/expenses";
 import { submitExpense } from "@/lib/actions/expenses";
 
 const steps = ["Vem gjorde utlägget?", "Vad gällde köpet?", "Vad var totalsumman?", "Lägg till kvittot", "Granska utlägget"];
@@ -26,7 +26,7 @@ async function prepareReceiptImage(file: File) {
 
     for (const quality of [0.9, 0.8, 0.65, 0.5]) {
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
-      if (blob && blob.size <= receiptMaxBytes) return new File([blob], "kvitto.jpg", { type: "image/jpeg" });
+      if (blob && blob.size <= imageReceiptMaxBytes) return new File([blob], "kvitto.jpg", { type: "image/jpeg" });
     }
     throw new Error("Bilden är för stor.");
   } finally {
@@ -63,8 +63,8 @@ export function ExpenseWizard() {
     try {
       let attachment: File;
       if (kind === "pdf") {
-        if (file.size > receiptMaxBytes) {
-          setError("PDF-filen är för stor. Välj en PDF på högst 900 kB.");
+        if (file.size > pdfReceiptMaxBytes) {
+          setError("PDF-filen är för stor. Välj en PDF på högst 4 MB.");
           return;
         }
         if (!isPdfReceipt(new Uint8Array(await file.arrayBuffer()))) {
@@ -108,7 +108,7 @@ export function ExpenseWizard() {
       form.set("person", person);
       form.set("reason", reason);
       form.set("amount", amount);
-      form.set("receipt", receipt.file);
+      form.set("receipt", receipt.file, receipt.file.type === pdfReceiptType ? "kvitto.pdf" : "kvitto.jpg");
       const message = await submitExpense(form);
       if (message) setError(message);
       else setDone(true);
@@ -164,7 +164,7 @@ export function ExpenseWizard() {
             <Input id="expense-receipt" type="file" accept="image/*" className="h-auto py-2" disabled={busy}
               onChange={(event) => { void chooseReceipt("image", event.target.files?.[0]); event.target.value = ""; }} />
           </Field>
-          <Field label="Eller välj en PDF" htmlFor="expense-receipt-pdf" hint="Högst 900 kB.">
+          <Field label="Eller välj en PDF" htmlFor="expense-receipt-pdf" hint="Högst 4 MB.">
             <Input id="expense-receipt-pdf" type="file" accept=".pdf,application/pdf" className="h-auto py-2" disabled={busy}
               onChange={(event) => { void chooseReceipt("pdf", event.target.files?.[0]); event.target.value = ""; }} />
           </Field>
