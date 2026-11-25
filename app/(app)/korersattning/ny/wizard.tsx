@@ -9,12 +9,13 @@ import { MileagePayouts } from "../payouts";
 
 const steps = ["Vem körde och när?", "Vart körde ni?", "Hur ska ersättningen delas?", "Granska resan"];
 const inputClass = "max-md:h-11 max-md:text-base";
+const officeAddress = "Ladugårdsvägen 1, 234 35 Lomma";
 
 export function MileageWizard({ today, routeEnabled }: { today: string; routeEnabled: boolean }) {
   const [step, setStep] = useState(0);
   const [driver, setDriver] = useState("");
   const [date, setDate] = useState(today);
-  const [origin, setOrigin] = useState("");
+  const [origin, setOrigin] = useState(officeAddress);
   const [destination, setDestination] = useState("");
   const [roundTrip, setRoundTrip] = useState(false);
   const [autoEstimate, setAutoEstimate] = useState(true);
@@ -165,6 +166,11 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
           <Field label="Till (adress eller ort)" htmlFor="mileage-destination">
             <Input id="mileage-destination" maxLength={180} value={destination} className={inputClass}
               onChange={(event) => { setDestination(event.target.value); clearEstimate(); }} />
+            <Button variant="ghost" className="self-start max-md:min-h-11"
+              disabled={destination === officeAddress}
+              onClick={() => { setDestination(officeAddress); clearEstimate(); }}>
+              Sätt kontoret som mål
+            </Button>
           </Field>
           {routeEnabled && autoEstimate && (
             <Field label="Typ av resa" htmlFor="mileage-trip">
