@@ -5,9 +5,15 @@ import { Button, Field, Select } from "@/components/ui";
 import { updateExpenseStatus } from "@/lib/actions/expenses";
 import { expenseStatuses, type ExpenseStatus } from "@/lib/expenses";
 
-export function ExpenseStatusForm({ id, status }: { id: string; status: ExpenseStatus }) {
+export function ExpenseStatusForm({
+  id, status, saveStatusAction = updateExpenseStatus,
+}: {
+  id: string;
+  status: ExpenseStatus;
+  saveStatusAction?: (id: string, previous: string, error: string | null, form: FormData) => Promise<string | null>;
+}) {
   const [nextStatus, setNextStatus] = useState<string>(status);
-  const [error, action, pending] = useActionState(updateExpenseStatus.bind(null, id, status), null);
+  const [error, action, pending] = useActionState(saveStatusAction.bind(null, id, status), null);
 
   return (
     <form action={action} className="space-y-3">
