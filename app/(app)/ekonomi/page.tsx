@@ -264,12 +264,12 @@ export default async function EkonomiPage(props: PageProps<"/ekonomi">) {
               </thead>
               <tbody>
                 {openInvoices.map((inv) => (
-                  <tr key={inv.order_number} className="relative border-t border-line hover:bg-canvas">
+                  <tr key={inv.order_number} className="border-t border-line hover:bg-canvas">
                     <td className="px-4 py-2.5">
                       <Link
                         href={`/ordrar/${inv.order_number}`}
                         prefetch={false}
-                        className="font-medium text-ink after:absolute after:inset-0"
+                        className="font-medium text-ink inline-block hover:underline focus-visible:underline"
                       >
                         {orderRef(inv.order_number)}
                       </Link>
