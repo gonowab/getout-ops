@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { requireExpenseManager } from "@/lib/expense-access";
 import { expenseIdPattern, expensePeople, expenseStatuses } from "@/lib/expenses";
-import { mileageAmounts, mileagePerson, parseFuelAmount, parseMileageDistance, validMileageDate, type MileageAddress } from "@/lib/mileage";
+import { mileageAmounts, mileagePerson, mileageTripKinds, parseFuelAmount, parseMileageDistance, validMileageDate, type MileageAddress } from "@/lib/mileage";
 import { sql } from "@/lib/db";
 import { todayISO } from "@/lib/format";
 
@@ -56,6 +56,7 @@ export async function submitMileage(form: FormData) {
   const destination = field("destination");
   const distance = parseMileageDistance(field("distance"));
   const purpose = field("purpose");
+  const tripKind = field("tripKind");
   const fuelOre = parseFuelAmount(field("fuel"));
   const fuelPayer = fuelOre ? mileagePerson(field("fuelPayer")) : null;
   const recipients = expensePeople.filter((person) => form.getAll("recipient").includes(person));
@@ -65,6 +66,7 @@ export async function submitMileage(form: FormData) {
   if (!origin || !destination || origin.length > 180 || destination.length > 180 || !distance) {
     return "Ange start, mål och en körsträcka mellan 0,1 och 10 000 km.";
   }
+  if (tripKind && !Object.hasOwn(mileageTripKinds, tripKind)) return "Välj en giltig typ av resa.";
   if (!purpose || purpose.length > 160) return "Ange ett syfte på högst 160 tecken.";
   if (fuelOre === null || (fuelOre > 0 && !fuelPayer)) return "Ange bensinkostnad och vem som betalade.";
   if (!recipients.length) return "Välj minst en person som ska dela på återstoden.";
@@ -73,8 +75,8 @@ export async function submitMileage(form: FormData) {
   try {
     const [saved] = await sql<{ id: string }[]>`
       insert into public.mileage_claims
-        (id, driver, travel_date, origin, destination, distance_tenths, purpose, fuel_ore, fuel_payer, recipients, amounts, submitted_by)
-      values (${id}, ${driver}, ${date}, ${origin}, ${destination}, ${distance}, ${purpose}, ${fuelOre}, ${fuelPayer},
+        (id, driver, travel_date, origin, destination, distance_tenths, trip_kind, purpose, fuel_ore, fuel_payer, recipients, amounts, submitted_by)
+      values (${id}, ${driver}, ${date}, ${origin}, ${destination}, ${distance}, ${tripKind || null}, ${purpose}, ${fuelOre}, ${fuelPayer},
         ${recipients}, ${JSON.stringify(amounts)}::jsonb, ${user.id})
       on conflict (id) do update set id = excluded.id
       where mileage_claims.submitted_by = excluded.submitted_by

@@ -4,7 +4,7 @@ import { startTransition, useEffect, useRef, useState, type FormEvent } from "re
 import { Button, ButtonLink, Field, Input, Select, Textarea } from "@/components/ui";
 import { estimateMileage, submitMileage } from "@/lib/actions/mileage";
 import { expensePeople, formatExpenseAmount } from "@/lib/expenses";
-import { mileageAmounts, mileagePerson, mileageRateOrePerKm, parseFuelAmount, parseMileageDistance, validMileageDate, type MileageAddress } from "@/lib/mileage";
+import { mileageAmounts, mileagePerson, mileageRateOrePerKm, mileageTripKinds, parseFuelAmount, parseMileageDistance, validMileageDate, type MileageAddress } from "@/lib/mileage";
 import { MileageAddressBook } from "./address-book";
 import { MileagePayouts } from "../payouts";
 
@@ -112,6 +112,7 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
     for (const [name, value] of Object.entries({ id: id.current, driver, date, origin, destination, distance, purpose, fuel, fuelPayer })) {
       form.set(name, value);
     }
+    form.set("tripKind", roundTrip ? "return" : "one-way");
     recipients.forEach((person) => form.append("recipient", person));
     setSaving(true);
     try {
@@ -191,15 +192,12 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
                 clearEstimate();
               }
             }} />
-          {routeEnabled && autoEstimate && (
-            <Field label="Typ av resa" htmlFor="mileage-trip">
-              <Select id="mileage-trip" value={roundTrip ? "return" : "one-way"} className={inputClass}
-                onChange={(event) => { setRoundTrip(event.target.value === "return"); clearEstimate(); }}>
-                <option value="one-way">Enkel väg</option>
-                <option value="return">Tur och retur</option>
-              </Select>
-            </Field>
-          )}
+          <Field label="Typ av resa" htmlFor="mileage-trip">
+            <Select id="mileage-trip" value={roundTrip ? "return" : "one-way"} className={inputClass}
+              onChange={(event) => { setRoundTrip(event.target.value === "return"); clearEstimate(); }}>
+              {Object.entries(mileageTripKinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </Select>
+          </Field>
           <Field label="Totalt körda kilometer" htmlFor="mileage-distance" hint="25 kr per mil. Räkna med hela sträckan du körde.">
             <Input id="mileage-distance" inputMode="decimal" maxLength={7} value={distance} className={inputClass}
               onChange={(event) => {
@@ -238,7 +236,7 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
           </fieldset>
         </>}
         {step === 3 && amounts && <>
-          <p className="break-words text-sm"><strong>{origin.trim()} → {destination.trim()}</strong><br />{driver} · {date} · {distance} km<br />{purpose.trim()}</p>
+          <p className="break-words text-sm"><strong>{origin.trim()} → {destination.trim()}</strong><br />{driver} · {date} · {distance} km · {mileageTripKinds[roundTrip ? "return" : "one-way"]}<br />{purpose.trim()}</p>
           <MileagePayouts amounts={amounts} />
         </>}
       </div>
