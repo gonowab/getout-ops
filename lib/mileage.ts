@@ -42,3 +42,6 @@ export function validMileageDate(value: string) {
 }
 
 export type MileageAddress = { id: string; name: string; address: string };
+
+export const mileageTripKinds = { "one-way": "Enkel väg", return: "Tur och retur" } as const;
+export type MileageTripKind = keyof typeof mileageTripKinds;
