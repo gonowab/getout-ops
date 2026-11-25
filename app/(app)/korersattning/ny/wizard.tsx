@@ -4,18 +4,20 @@ import { startTransition, useEffect, useRef, useState, type FormEvent } from "re
 import { Button, ButtonLink, Field, Input, Select, Textarea } from "@/components/ui";
 import { estimateMileage, submitMileage } from "@/lib/actions/mileage";
 import { expensePeople, formatExpenseAmount } from "@/lib/expenses";
-import { mileageAmounts, mileagePerson, mileageRateOrePerKm, parseFuelAmount, parseMileageDistance, validMileageDate } from "@/lib/mileage";
+import { mileageAmounts, mileagePerson, mileageRateOrePerKm, parseFuelAmount, parseMileageDistance, validMileageDate, type MileageAddress } from "@/lib/mileage";
+import { MileageAddressBook } from "./address-book";
 import { MileagePayouts } from "../payouts";
 
 const steps = ["Vem körde och när?", "Vart körde ni?", "Hur ska ersättningen delas?", "Granska resan"];
 const inputClass = "max-md:h-11 max-md:text-base";
 const officeAddress = "Ladugårdsvägen 1, 234 35 Lomma";
 
-export function MileageWizard({ today, routeEnabled }: { today: string; routeEnabled: boolean }) {
+export function MileageWizard({ today, routeEnabled, initialAddresses }: { today: string; routeEnabled: boolean; initialAddresses: MileageAddress[] }) {
   const [step, setStep] = useState(0);
   const [driver, setDriver] = useState("");
   const [date, setDate] = useState(today);
-  const [origin, setOrigin] = useState(officeAddress);
+  const [origin, setOrigin] = useState("");
+  const [addresses, setAddresses] = useState(initialAddresses);
   const [destination, setDestination] = useState("");
   const [roundTrip, setRoundTrip] = useState(false);
   const [autoEstimate, setAutoEstimate] = useState(true);
@@ -162,6 +164,11 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
           <Field label="Från (adress eller ort)" htmlFor="mileage-origin">
             <Input id="mileage-origin" maxLength={180} value={origin} className={inputClass}
               onChange={(event) => { setOrigin(event.target.value); clearEstimate(); }} />
+            <Button variant="ghost" className="self-start max-md:min-h-11"
+              disabled={origin === officeAddress}
+              onClick={() => { setOrigin(officeAddress); clearEstimate(); }}>
+              Sätt kontoret som start
+            </Button>
           </Field>
           <Field label="Till (adress eller ort)" htmlFor="mileage-destination">
             <Input id="mileage-destination" maxLength={180} value={destination} className={inputClass}
@@ -172,6 +179,18 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
               Sätt kontoret som mål
             </Button>
           </Field>
+          <MileageAddressBook addresses={addresses}
+            onAdd={(entry) => setAddresses((current) => [...current, entry])}
+            onUse={(field, address) => {
+              if (field === "start" && address !== origin) {
+                setOrigin(address);
+                clearEstimate();
+              }
+              if (field === "destination" && address !== destination) {
+                setDestination(address);
+                clearEstimate();
+              }
+            }} />
           {routeEnabled && autoEstimate && (
             <Field label="Typ av resa" htmlFor="mileage-trip">
               <Select id="mileage-trip" value={roundTrip ? "return" : "one-way"} className={inputClass}

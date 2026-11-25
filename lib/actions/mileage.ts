@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { requireExpenseManager } from "@/lib/expense-access";
 import { expenseIdPattern, expensePeople, expenseStatuses } from "@/lib/expenses";
-import { mileageAmounts, mileagePerson, parseFuelAmount, parseMileageDistance, validMileageDate } from "@/lib/mileage";
+import { mileageAmounts, mileagePerson, parseFuelAmount, parseMileageDistance, validMileageDate, type MileageAddress } from "@/lib/mileage";
 import { sql } from "@/lib/db";
 import { todayISO } from "@/lib/format";
 
@@ -104,5 +104,29 @@ export async function updateMileageStatus(id: string, previous: string, _: strin
     return updated ? null : "Statusen har ändrats. Kontrollera den aktuella statusen.";
   } catch {
     return "Statusen kunde inte sparas. Försök igen.";
+  }
+}
+
+export async function saveMileageAddress(rawName: string, rawAddress: string) {
+  await requireUser();
+  if (typeof rawName !== "string" || typeof rawAddress !== "string") return { error: "Ange namn och adress." };
+  const name = rawName.trim();
+  const address = rawAddress.trim();
+  if (!name || !address || name.length > 60 || address.length > 180) {
+    return { error: "Ange ett namn på högst 60 tecken och en adress på högst 180 tecken." };
+  }
+
+  try {
+    const [entry] = await sql<MileageAddress[]>`
+      insert into public.mileage_addresses (name, address)
+      values (${name}, ${address})
+      on conflict (lower(name)) do nothing
+      returning id, name, address`;
+    if (!entry) return { error: "Det finns redan en plats med det namnet. Välj ett annat namn." };
+    revalidatePath("/korersattning/ny");
+    return { entry };
+  } catch (error) {
+    console.error("[mileage] Kunde inte spara adress", error instanceof Error ? error.message : "");
+    return { error: "Adressen kunde inte sparas. Försök igen." };
   }
 }

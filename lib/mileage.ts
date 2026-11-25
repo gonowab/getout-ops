@@ -40,3 +40,5 @@ export function validMileageDate(value: string) {
   const parsed = new Date(value + "T00:00:00Z");
   return Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
 }
+
+export type MileageAddress = { id: string; name: string; address: string };
