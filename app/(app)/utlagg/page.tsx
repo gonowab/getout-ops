@@ -1,5 +1,5 @@
 import { ClipboardList, Plus } from "lucide-react";
-import Link from "next/link";
+import { ActionCards } from "@/components/action-cards";
 import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { canManageExpenses } from "@/lib/expense-access";
@@ -16,15 +16,7 @@ export default async function ExpensesPage() {
   return (
     <>
       <PageHeader title="Utlägg" />
-      <div className="grid max-w-2xl gap-3 sm:grid-cols-2">
-        {options.map(({ href, label, description, icon: Icon }) => (
-          <Link key={href} href={href} className="rounded-xl border border-line bg-surface p-5 hover:border-line-strong hover:bg-hover">
-            <Icon className="mb-3 size-5 text-muted" aria-hidden />
-            <h2 className="font-semibold">{label}</h2>
-            <p className="mt-1 text-sm text-muted">{description}</p>
-          </Link>
-        ))}
-      </div>
+      <ActionCards options={options} />
     </>
   );
 }

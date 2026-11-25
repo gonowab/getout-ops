@@ -59,7 +59,7 @@ export async function submitMileage(form: FormData) {
   const tripKind = field("tripKind");
   const fuelOre = parseFuelAmount(field("fuel"));
   const fuelPayer = fuelOre ? mileagePerson(field("fuelPayer")) : null;
-  const recipients = expensePeople.filter((person) => form.getAll("recipient").includes(person));
+  const recipients = expensePeople;
 
   if (!expenseIdPattern.test(id)) return "Öppna Ny resa igen och försök på nytt.";
   if (!driver || !validMileageDate(date) || date > todayISO()) return "Välj förare och ett giltigt resedatum.";
@@ -69,7 +69,6 @@ export async function submitMileage(form: FormData) {
   if (tripKind && !Object.hasOwn(mileageTripKinds, tripKind)) return "Välj en giltig typ av resa.";
   if (!purpose || purpose.length > 160) return "Ange ett syfte på högst 160 tecken.";
   if (fuelOre === null || (fuelOre > 0 && !fuelPayer)) return "Ange bensinkostnad och vem som betalade.";
-  if (!recipients.length) return "Välj minst en person som ska dela på återstoden.";
 
   const amounts = mileageAmounts(distance, fuelOre, fuelPayer ?? null, recipients);
   try {
