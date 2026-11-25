@@ -102,3 +102,9 @@ npm run dev
 2. GetOuts befintliga produktionsprojekt har `info@getout.nu` som utläggsansvarig. I andra miljöer, eller för att byta ansvarig, sätter ni `EXPENSE_ADMIN_EMAIL` i Vercel till den ansvarigas adress i Supabase Authentication och driftsätter om.
 
 Inloggade kollegor registrerar utlägg via **Utlägg → Nytt utlägg**. Filip öppnar **Hantera utlägg** för att se kvitton, totalsumman att ersätta och ändra status efter utbetalning. Appen registrerar status. Själva utbetalningen görs separat.
+
+## Körersättning
+
+Kör `supabase/migrations/0014_mileage_claims.sql` i Supabase innan funktionen driftsätts. Behörigheten för **Hantera körersättning** följer samma inställning som **Hantera utlägg**.
+
+För att aktivera **Uppskatta körsträcka**, aktivera Google Maps Routes API i Google Cloud och sätt den serverbaserade variabeln `GOOGLE_ROUTES_API_KEY` i Vercel. Utan nyckeln anger användaren körda kilometer själv.
