@@ -107,4 +107,4 @@ Inloggade kollegor registrerar utlägg via **Utlägg → Nytt utlägg**. Filip �
 
 Kör `supabase/migrations/0014_mileage_claims.sql` i Supabase innan funktionen driftsätts. Behörigheten för **Hantera körersättning** följer samma inställning som **Hantera utlägg**.
 
-För att aktivera **Uppskatta körsträcka**, aktivera Google Maps Routes API i Google Cloud och sätt den serverbaserade variabeln `GOOGLE_ROUTES_API_KEY` i Vercel. Utan nyckeln anger användaren körda kilometer själv.
+För att aktivera automatisk uppskattning av körsträcka för enkel väg och tur och retur, aktivera Google Maps Routes API i Google Cloud och sätt den serverbaserade variabeln `GOOGLE_ROUTES_API_KEY` i Vercel. Utan nyckeln anger användaren körda kilometer själv.

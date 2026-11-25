@@ -12,7 +12,7 @@ export async function estimateMileage(origin: string, destination: string, round
   await requireUser();
   const key = process.env.GOOGLE_ROUTES_API_KEY;
   if (!key) return { error: "Avståndssökning är inte aktiverad. Ange körda kilometer manuellt." };
-  if (typeof origin !== "string" || typeof destination !== "string") return { error: "Ange start och slutpunkt." };
+  if (typeof origin !== "string" || typeof destination !== "string" || typeof roundTrip !== "boolean") return { error: "Ange start och slutpunkt." };
   const from = origin.trim();
   const to = destination.trim();
   if (!from || !to || from.length > 180 || to.length > 180 || from === to) {

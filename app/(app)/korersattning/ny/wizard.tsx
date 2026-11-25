@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { startTransition, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, ButtonLink, Field, Input, Select, Textarea } from "@/components/ui";
 import { estimateMileage, submitMileage } from "@/lib/actions/mileage";
 import { expensePeople, formatExpenseAmount } from "@/lib/expenses";
@@ -17,6 +17,7 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [roundTrip, setRoundTrip] = useState(false);
+  const [autoEstimate, setAutoEstimate] = useState(true);
   const [distance, setDistance] = useState("");
   const [purpose, setPurpose] = useState("");
   const [fuel, setFuel] = useState("");
@@ -30,6 +31,7 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
   const [done, setDone] = useState(false);
   const id = useRef<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const manualDistance = useRef(false);
   const tenths = parseMileageDistance(distance);
   const fuelOre = parseFuelAmount(fuel);
   const payer = fuelOre ? mileagePerson(fuelPayer) : undefined;
@@ -40,30 +42,49 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
     if (step > 0 || done) heading.current?.focus();
   }, [step, done]);
 
+  useEffect(() => {
+    const from = origin.trim();
+    const to = destination.trim();
+    if (step !== 1 || !routeEnabled || !autoEstimate || !from || !to || manualDistance.current) return;
+
+    let current = true;
+    const timer = window.setTimeout(() => {
+      if (manualDistance.current) return;
+      setEstimating(true);
+      startTransition(async () => {
+        try {
+          const result = await estimateMileage(from, to, roundTrip);
+          if (!current || manualDistance.current) return;
+          if (result.kilometers) {
+            setDistance(result.kilometers);
+            setEstimated(true);
+            setError("");
+            setRouteMessage("Uppskattad körsträcka. Justera den om du körde en annan väg.");
+          } else {
+            setRouteMessage(result.error ?? "Ange körda kilometer manuellt.");
+          }
+        } catch {
+          if (current && !manualDistance.current) {
+            setRouteMessage("Kunde inte uppskatta avståndet. Ange körda kilometer manuellt.");
+          }
+        } finally {
+          if (current && !manualDistance.current) setEstimating(false);
+        }
+      });
+    }, 1200);
+
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [step, routeEnabled, autoEstimate, origin, destination, roundTrip]);
+
   function clearEstimate() {
-    if (estimated) setDistance("");
+    if (estimated || (autoEstimate && routeEnabled && manualDistance.current)) setDistance("");
+    manualDistance.current = false;
+    setEstimating(false);
     setEstimated(false);
     setRouteMessage("");
-  }
-
-  async function estimate() {
-    setEstimating(true);
-    setRouteMessage("");
-    try {
-      const result = await estimateMileage(origin, destination, roundTrip);
-      if (result.kilometers) {
-        setDistance(result.kilometers);
-        setEstimated(true);
-        setError("");
-        setRouteMessage("Uppskattad körsträcka. Justera om du körde en annan sträcka.");
-      } else {
-        setRouteMessage(result.error ?? "Ange körda kilometer manuellt.");
-      }
-    } catch {
-      setRouteMessage("Kunde inte uppskatta avståndet. Ange körda kilometer manuellt.");
-    } finally {
-      setEstimating(false);
-    }
   }
 
   async function advance(event: FormEvent<HTMLFormElement>) {
@@ -127,29 +148,44 @@ export function MileageWizard({ today, routeEnabled }: { today: string; routeEna
           </Field>
         </>}
         {step === 1 && <>
+          {routeEnabled && (
+            <label className="block space-y-1 text-sm">
+              <span className="flex min-h-9 items-center gap-2">
+                <input type="checkbox" checked={autoEstimate}
+                  onChange={(event) => { setAutoEstimate(event.target.checked); clearEstimate(); }} />
+                Beräkna körsträckan automatiskt
+              </span>
+              <span className="block text-xs text-muted">När valet är på skickas start och mål till Google Maps för att beräkna sträckan.</span>
+            </label>
+          )}
           <Field label="Från (adress eller ort)" htmlFor="mileage-origin">
-            <Input id="mileage-origin" maxLength={180} value={origin} className={inputClass} disabled={estimating}
+            <Input id="mileage-origin" maxLength={180} value={origin} className={inputClass}
               onChange={(event) => { setOrigin(event.target.value); clearEstimate(); }} />
           </Field>
           <Field label="Till (adress eller ort)" htmlFor="mileage-destination">
-            <Input id="mileage-destination" maxLength={180} value={destination} className={inputClass} disabled={estimating}
+            <Input id="mileage-destination" maxLength={180} value={destination} className={inputClass}
               onChange={(event) => { setDestination(event.target.value); clearEstimate(); }} />
           </Field>
-          {routeEnabled && <div className="space-y-2">
-            <label className="flex min-h-9 items-center gap-2">
-              <input type="checkbox" checked={roundTrip} disabled={estimating}
-                onChange={(event) => { setRoundTrip(event.target.checked); clearEstimate(); }} /> Beräkna tur och retur
-            </label>
-            <Button className="max-md:h-11" onClick={() => void estimate()} disabled={estimating || !origin.trim() || !destination.trim()}>
-              {estimating ? "Beräknar…" : "Uppskatta körsträcka"}
-            </Button>
-            <p className="text-xs text-muted">När du beräknar skickas start och mål till Google Maps.</p>
-            {routeMessage && <p role="status" className="text-sm text-muted">{routeMessage}</p>}
-          </div>}
+          {routeEnabled && autoEstimate && (
+            <Field label="Typ av resa" htmlFor="mileage-trip">
+              <Select id="mileage-trip" value={roundTrip ? "return" : "one-way"} className={inputClass}
+                onChange={(event) => { setRoundTrip(event.target.value === "return"); clearEstimate(); }}>
+                <option value="one-way">Enkel väg</option>
+                <option value="return">Tur och retur</option>
+              </Select>
+            </Field>
+          )}
           <Field label="Totalt körda kilometer" htmlFor="mileage-distance" hint="25 kr per mil. Räkna med hela sträckan du körde.">
-            <Input id="mileage-distance" inputMode="decimal" maxLength={7} value={distance} className={inputClass} disabled={estimating}
-              onChange={(event) => { setDistance(event.target.value); setEstimated(false); setRouteMessage(""); }} />
+            <Input id="mileage-distance" inputMode="decimal" maxLength={7} value={distance} className={inputClass}
+              onChange={(event) => {
+                manualDistance.current = true;
+                setDistance(event.target.value);
+                setEstimated(false);
+                setEstimating(false);
+                setRouteMessage("");
+              }} />
           </Field>
+          {(estimating || routeMessage) && <p role="status" className="text-sm text-muted">{estimating ? "Beräknar körsträckan…" : routeMessage}</p>}
           {tenths !== null && <p className="text-sm font-medium">{formatExpenseAmount(tenths * mileageRateOrePerKm / 10)} i milersättning</p>}
           <Field label="Syfte med resan" htmlFor="mileage-purpose">
             <Textarea id="mileage-purpose" maxLength={160} value={purpose} className="max-md:text-base" onChange={(event) => setPurpose(event.target.value)} />
