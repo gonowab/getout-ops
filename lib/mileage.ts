@@ -16,7 +16,7 @@ export function parseFuelAmount(value: string) {
   return !fuel || /^0+(?:[,.]0{1,2})?$/.test(fuel) ? 0 : parseExpenseAmount(fuel);
 }
 
-export function mileageAmounts(distanceTenths: number, fuelOre: number, payer: MileagePerson | null, recipients: MileagePerson[]) {
+export function mileageAmounts(distanceTenths: number, fuelOre: number, payer: MileagePerson | null, recipients: readonly MileagePerson[]) {
   const mileageOre = distanceTenths * (mileageRateOrePerKm / 10);
   const remainingOre = Math.max(0, mileageOre - fuelOre);
   const share = Math.floor(remainingOre / recipients.length);

@@ -8,7 +8,7 @@ import { mileageAmounts, mileagePerson, mileageRateOrePerKm, mileageTripKinds, p
 import { MileageAddressBook } from "./address-book";
 import { MileagePayouts } from "../payouts";
 
-const steps = ["Vem körde och när?", "Vart körde ni?", "Hur ska ersättningen delas?", "Granska resan"];
+const steps = ["Vem körde och när?", "Vart körde ni?", "Betalades bensin för resan?", "Granska resan"];
 const inputClass = "max-md:h-11 max-md:text-base";
 const officeAddress = "Ladugårdsvägen 1, 234 35 Lomma";
 
@@ -25,7 +25,6 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
   const [purpose, setPurpose] = useState("");
   const [fuel, setFuel] = useState("");
   const [fuelPayer, setFuelPayer] = useState("");
-  const [recipients, setRecipients] = useState([...expensePeople]);
   const [error, setError] = useState("");
   const [routeMessage, setRouteMessage] = useState("");
   const [estimated, setEstimated] = useState(false);
@@ -38,8 +37,8 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
   const tenths = parseMileageDistance(distance);
   const fuelOre = parseFuelAmount(fuel);
   const payer = fuelOre ? mileagePerson(fuelPayer) : undefined;
-  const amounts = tenths && fuelOre !== null && recipients.length
-    ? mileageAmounts(tenths, fuelOre, payer ?? null, recipients) : null;
+  const amounts = tenths && fuelOre !== null
+    ? mileageAmounts(tenths, fuelOre, payer ?? null, expensePeople) : null;
 
   useEffect(() => {
     if (step > 0 || done) heading.current?.focus();
@@ -98,7 +97,7 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
       !origin.trim() || !destination.trim() || !tenths || !purpose.trim() ? "Fyll i start, mål, körsträcka och syfte." : "",
       fuelOre === null || (fuelOre > 0 && !payer)
         ? "Ange ett giltigt bensinbelopp och vem som betalade."
-        : recipients.length === 0 ? "Välj minst en person som ska dela på återstoden." : "",
+        : "",
     ];
     const validation = validations[step] ?? validations.find(Boolean) ?? "";
     setError(validation);
@@ -113,7 +112,6 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
       form.set(name, value);
     }
     form.set("tripKind", roundTrip ? "return" : "one-way");
-    recipients.forEach((person) => form.append("recipient", person));
     setSaving(true);
     try {
       const message = await submitMileage(form);
@@ -224,16 +222,6 @@ export function MileageWizard({ today, routeEnabled, initialAddresses }: { today
               {expensePeople.map((person) => <option key={person}>{person}</option>)}
             </Select>
           </Field>}
-          <fieldset>
-            <legend className="text-sm font-medium">Vilka ska dela på resten?</legend>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {expensePeople.map((person) => <label key={person} className="flex min-h-11 items-center gap-2 rounded-md border border-line px-2">
-                <input type="checkbox" checked={recipients.includes(person)}
-                  onChange={(event) => setRecipients(expensePeople.filter((candidate) => candidate === person ? event.target.checked : recipients.includes(candidate)))} />
-                {person}
-              </label>)}
-            </div>
-          </fieldset>
         </>}
         {step === 3 && amounts && <>
           <p className="break-words text-sm"><strong>{origin.trim()} → {destination.trim()}</strong><br />{driver} · {date} · {distance} km · {mileageTripKinds[roundTrip ? "return" : "one-way"]}<br />{purpose.trim()}</p>
