@@ -12,12 +12,12 @@ export function ExpenseStatusForm({ id, status }: { id: string; status: ExpenseS
   return (
     <form action={action} className="space-y-3">
       <Field label="Status" htmlFor="expense-status">
-        <Select id="expense-status" name="status" value={nextStatus} disabled={pending} onChange={(event) => setNextStatus(event.target.value)}>
+        <Select id="expense-status" name="status" value={nextStatus} disabled={pending} className="max-md:h-11 max-md:text-base" onChange={(event) => setNextStatus(event.target.value)}>
           {Object.entries(expenseStatuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Select>
       </Field>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-      <Button type="submit" variant="primary" disabled={pending || nextStatus === status}>
+      <Button type="submit" variant="primary" className="max-md:min-h-11" disabled={pending || nextStatus === status}>
         {pending ? "Sparar…" : "Spara status"}
       </Button>
     </form>
