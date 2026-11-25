@@ -81,9 +81,9 @@ export default async function KunderPage(props: PageProps<"/kunder">) {
             </thead>
             <tbody>
               {customers.map((c) => (
-                <tr key={c.id} className="relative border-t border-line hover:bg-canvas">
+                <tr key={c.id} className="border-t border-line hover:bg-canvas">
                   <td className="px-4 py-2.5 font-medium text-ink">
-                    <Link href={`/kunder/${c.id}`} prefetch={false} className="after:absolute after:inset-0">
+                    <Link href={`/kunder/${c.id}`} prefetch={false} className="inline-block hover:underline focus-visible:underline">
                       {c.name}
                     </Link>
                   </td>
