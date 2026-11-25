@@ -124,7 +124,7 @@ export function ExpenseWizard() {
       <section className="max-w-lg rounded-xl border border-line bg-surface p-5 sm:p-7">
         <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold">Utlägget är inskickat</h2>
         <p className="mb-5 mt-2 text-sm text-muted">{person} · {formatExpenseAmount(ore ?? 0)}</p>
-        <ButtonLink href="/utlagg">Tillbaka till Utlägg</ButtonLink>
+        <ButtonLink href="/utlagg" className="max-md:min-h-11">Tillbaka till Utlägg</ButtonLink>
       </section>
     );
   }
@@ -139,7 +139,7 @@ export function ExpenseWizard() {
         <div role="group" aria-label="Person" className="grid grid-cols-2 gap-2">
           {expensePeople.map((name) => (
             <Button key={name} variant={person === name ? "primary" : "secondary"} aria-pressed={person === name}
-              className="h-12 justify-start px-4" onClick={() => { setPerson(name); setError(""); }}>
+              className="h-12 justify-start px-4 max-md:text-base" onClick={() => { setPerson(name); setError(""); }}>
               {name}
             </Button>
           ))}
@@ -148,24 +148,25 @@ export function ExpenseWizard() {
       {step === 1 && (
         <Field label="Kort anledning" htmlFor="expense-reason">
           <Textarea id="expense-reason" maxLength={160} placeholder="Till exempel fika till kundmöte" value={reason}
+            className="max-md:min-h-24 max-md:text-base"
             onChange={(event) => setReason(event.target.value)} />
         </Field>
       )}
       {step === 2 && (
         <Field label="Totalt belopp i kronor inklusive moms" htmlFor="expense-amount">
           <Input id="expense-amount" inputMode="decimal" maxLength={10} placeholder="0,00" value={amount}
-            onChange={(event) => setAmount(event.target.value)} className="h-11" />
+            onChange={(event) => setAmount(event.target.value)} className="h-11 max-md:min-h-12 max-md:text-base" />
         </Field>
       )}
       {step === 3 && (
         <div className="space-y-4">
           <Field label="Ta ett foto eller välj en bild" htmlFor="expense-receipt"
             hint="Se till att hela kvittot och totalsumman går att läsa.">
-            <Input id="expense-receipt" type="file" accept="image/*" className="h-auto py-2" disabled={busy}
+            <Input id="expense-receipt" type="file" accept="image/*" className="h-auto py-2 max-md:min-h-11 max-md:min-w-0" disabled={busy}
               onChange={(event) => { void chooseReceipt("image", event.target.files?.[0]); event.target.value = ""; }} />
           </Field>
           <Field label="Eller välj en PDF" htmlFor="expense-receipt-pdf" hint="Högst 4 MB.">
-            <Input id="expense-receipt-pdf" type="file" accept=".pdf,application/pdf" className="h-auto py-2" disabled={busy}
+            <Input id="expense-receipt-pdf" type="file" accept=".pdf,application/pdf" className="h-auto py-2 max-md:min-h-11 max-md:min-w-0" disabled={busy}
               onChange={(event) => { void chooseReceipt("pdf", event.target.files?.[0]); event.target.value = ""; }} />
           </Field>
         </div>
@@ -191,8 +192,8 @@ export function ExpenseWizard() {
       {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
 
       <div className={cn("mt-6 flex items-center gap-2", step > 0 ? "justify-between" : "justify-end")}>
-        {step > 0 && <Button className="h-10" disabled={busy} onClick={() => { setStep(step - 1); setError(""); }}>Tillbaka</Button>}
-        <Button type="submit" variant="primary" className="h-10" disabled={busy}>
+        {step > 0 && <Button className="h-10 max-md:h-11" disabled={busy} onClick={() => { setStep(step - 1); setError(""); }}>Tillbaka</Button>}
+        <Button type="submit" variant="primary" className="h-10 max-md:h-11 max-md:flex-1" disabled={busy}>
           {busy ? (step === 3 ? "Läser kvittot…" : "Skickar…") : step === 4 ? "Skicka in utlägg" : "Nästa"}
         </Button>
       </div>
